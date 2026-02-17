@@ -1,0 +1,13 @@
+/* Sand Theme — 温暖极简，杂志感 */
+[data-theme="sand"] {
+  --color-bg: #F0EBE1;
+  --color-bg-secondary: #E6E0D4;
+  --color-text: #2C2418;
+  --color-text-secondary: #6B5E4F;
+  --color-accent: #C4654A;
+  --color-border: #D4CCBE;
+  --font-heading: "DM Serif Display", serif;
+  --font-body: "Inter", "Noto Sans SC", sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+  --line-height: 1.75;
+}

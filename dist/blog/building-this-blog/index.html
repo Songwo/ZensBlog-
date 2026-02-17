@@ -1,0 +1,23 @@
+<!DOCTYPE html><html lang="zh-CN"> <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="description" content="记录这个博客从框架选择到部署上线的完整过程，以及每一步背后的思考。"><link rel="icon" type="image/svg+xml" href="/favicon.svg"><title>从零搭建个人博客的技术选型 — Zen&#39;s Blog</title><link rel="stylesheet" href="/_astro/about.CbECEKIz.css"></head> <body class="min-h-screen flex flex-col">  <header class="fixed top-0 inset-x-0 z-50 bg-sand-100/80 backdrop-blur-md"> <div class="max-w-screen-xl mx-auto px-6 h-16 flex items-center justify-between"> <a href="/" class="font-serif text-xl text-bark hover:text-terra transition-colors">
+Zen
+</a> <nav class="flex items-center gap-8"> <a href="/blog" class="text-sm tracking-wide transition-colors text-terra"> 文章 </a><a href="/about" class="text-sm tracking-wide transition-colors text-bark/60 hover:text-bark"> 关于 </a> </nav> </div> </header> <main class="pt-16"> <!-- Article Header --> <header class="max-w-article mx-auto px-6 pt-20 md:pt-28 animate-fade-up"> <span class="inline-block text-xs tracking-widest uppercase text-terra mb-4"> 技术 </span> <h1 class="font-serif text-3xl md:text-5xl text-bark leading-tight"> 从零搭建个人博客的技术选型 </h1> <time class="block mt-5 text-sm text-bark/35"> 2026年1月15日 </time> </header> <!-- Cover --> <div class="max-w-screen-md mx-auto px-6 mt-12 animate-fade-up" style="animation-delay:.1s"> <img src="https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=960&h=600&fit=crop&q=80" alt="从零搭建个人博客的技术选型" class="w-full aspect-[2/1] object-cover rounded-[4px]"> </div> <!-- Article Body --> <article class="max-w-article mx-auto px-6 pt-12 pb-24 prose animate-fade-up" style="animation-delay:.15s"> <h2 id="为什么不用现成的平台">为什么不用现成的平台</h2>
+<p>WordPress、Notion、语雀……选择太多了。但作为一个开发者，我想要的是：完全的控制权、极致的性能、以及写作时的纯粹体验。</p>
+<h2 id="技术栈">技术栈</h2>
+<p>最终选择了 <strong>Astro</strong> 作为框架。原因很简单：</p>
+<ul>
+<li>默认零 JavaScript，页面加载极快</li>
+<li>原生支持 Markdown / MDX</li>
+<li>构建产物是纯静态 HTML，部署在哪里都行</li>
+</ul>
+<p>样式方案用了 <strong>Tailwind CSS</strong>，配合自定义的设计系统，可以快速实现一致的视觉语言。</p>
+<pre class="astro-code github-light" style="background-color:#fff;color:#24292e; overflow-x: auto;" tabindex="0" data-language="js"><code><span class="line"><span style="color:#6A737D">// 一个简单的日期格式化</span></span>
+<span class="line"><span style="color:#D73A49">const</span><span style="color:#005CC5"> fmt</span><span style="color:#D73A49"> =</span><span style="color:#D73A49"> new</span><span style="color:#24292E"> Intl.</span><span style="color:#6F42C1">DateTimeFormat</span><span style="color:#24292E">(</span><span style="color:#032F62">'zh-CN'</span><span style="color:#24292E">, {</span></span>
+<span class="line"><span style="color:#24292E">  year: </span><span style="color:#032F62">'numeric'</span><span style="color:#24292E">,</span></span>
+<span class="line"><span style="color:#24292E">  month: </span><span style="color:#032F62">'long'</span><span style="color:#24292E">,</span></span>
+<span class="line"><span style="color:#24292E">  day: </span><span style="color:#032F62">'numeric'</span><span style="color:#24292E">,</span></span>
+<span class="line"><span style="color:#24292E">});</span></span></code></pre>
+<h2 id="部署">部署</h2>
+<p>选择了 Cloudflare Pages。免费、全球 CDN、自动构建，几乎不需要运维。</p>
+<p>整个博客的 Lighthouse 评分：<strong>Performance 100 / Accessibility 100</strong>。</p> </article> <!-- Back --> <div class="max-w-article mx-auto px-6 pb-24"> <a href="/blog" class="text-sm text-bark/40 hover:text-terra transition-colors">
+&larr; 返回文章列表
+</a> </div> </main> <footer class="mt-auto border-t border-sand-300/60"> <div class="max-w-screen-xl mx-auto px-6 py-10 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-bark/40"> <span>&copy; 2026 Zen. All rights reserved.</span> <div class="flex gap-6"> <a href="/blog" class="hover:text-bark/60 transition-colors">文章</a> <a href="/about" class="hover:text-bark/60 transition-colors">关于</a> <a href="https://github.com" target="_blank" rel="noopener" class="hover:text-bark/60 transition-colors">GitHub</a> </div> </div> </footer>  </body></html>

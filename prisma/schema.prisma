@@ -1,0 +1,271 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  ADMIN
+  USER
+}
+
+enum PostType {
+  OFFICIAL
+  COMMUNITY
+}
+
+enum NotificationType {
+  LIKE
+  COMMENT_REPLY
+  MESSAGE
+}
+
+model User {
+  id             String      @id @default(cuid())
+  username       String?     @unique
+  name           String?
+  email          String?     @unique
+  emailVerified  DateTime?
+  image          String?
+  bio            String      @default("")
+  company        String?
+  location       String?
+  blog           String?
+  githubProfile  String?
+  githubCreatedAt DateTime?
+  githubFollowers Int         @default(0)
+  githubFollowing Int         @default(0)
+  githubPublicRepos Int       @default(0)
+  githubSyncedAt  DateTime?
+  title          String?
+  about          String       @default("")
+  website        String?
+  twitter        String?
+  linkedin       String?
+  githubId       String?     @unique
+  passwordHash   String?
+  role           UserRole    @default(USER)
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @default(now()) @updatedAt
+  posts          Post[]
+  comments       Comment[]
+  likes          PostLike[]
+  userBadges     UserBadge[]
+  activeBadgeId  String?
+  activeBadge    Badge?      @relation("ActiveUserBadge", fields: [activeBadgeId], references: [id], onDelete: SetNull)
+  sentMessages   Message[]       @relation("MessageSender")
+  receivedMessages Message[]     @relation("MessageReceiver")
+  notifications  Notification[]
+  accounts       Account[]
+  sessions       Session[]
+}
+
+model Post {
+  id          String      @id @default(cuid())
+  title       String
+  slug        String      @unique
+  content     String
+  excerpt     String      @default("")
+  coverImage  String      @default("")
+  published   Boolean     @default(false)
+  pinned      Boolean     @default(false)
+  views       Int         @default(0)
+  type        PostType    @default(OFFICIAL)
+  authorId    String?
+  author      User?       @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  categoryId  String?
+  category    Category?   @relation(fields: [categoryId], references: [id])
+  tags        PostTag[]
+  comments    Comment[]
+  likes       PostLike[]
+  publishedAt DateTime?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+}
+
+model PostLike {
+  id        String   @id @default(cuid())
+  userId    String
+  postId    String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, postId])
+  @@index([postId])
+  @@index([userId])
+}
+
+model Category {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  slug      String   @unique
+  sortOrder Int      @default(0)
+  posts     Post[]
+  createdAt DateTime @default(now())
+}
+
+model Tag {
+  id    String    @id @default(cuid())
+  name  String    @unique
+  slug  String    @unique
+  posts PostTag[]
+}
+
+model PostTag {
+  postId String
+  tagId  String
+  post   Post   @relation(fields: [postId], references: [id], onDelete: Cascade)
+  tag    Tag    @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([postId, tagId])
+}
+
+model Comment {
+  id        String      @id @default(cuid())
+  content   String
+  author    String
+  email     String      @default("")
+  approved  Boolean     @default(false)
+  postId    String
+  post      Post        @relation(fields: [postId], references: [id], onDelete: Cascade)
+  parentId  String?
+  parent    Comment?    @relation("CommentReplies", fields: [parentId], references: [id])
+  replies   Comment[]   @relation("CommentReplies")
+  userId    String?
+  user      User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
+  createdAt DateTime    @default(now())
+}
+
+model Badge {
+  id          String      @id @default(cuid())
+  name        String      @unique
+  icon        String      @default("🏅")
+  iconUrl     String?
+  color       String      @default("#64748b")
+  description String      @default("")
+  condition   String      @default("")
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  userBadges  UserBadge[]
+  activeUsers User[]       @relation("ActiveUserBadge")
+}
+
+model UserBadge {
+  id         String   @id @default(cuid())
+  userId     String
+  badgeId    String
+  awardedAt  DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  badge      Badge    @relation(fields: [badgeId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, badgeId])
+}
+
+model Message {
+  id         String   @id @default(cuid())
+  senderId   String
+  receiverId String
+  content    String
+  readAt     DateTime?
+  createdAt  DateTime @default(now())
+  sender     User     @relation("MessageSender", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver   User     @relation("MessageReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
+
+  @@index([receiverId, createdAt])
+  @@index([senderId, createdAt])
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  actorId   String?
+  type      NotificationType
+  title     String
+  body      String           @default("")
+  targetId  String?
+  targetUrl String?
+  readAt    DateTime?
+  createdAt DateTime         @default(now())
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([userId, readAt])
+}
+
+model Account {
+  id                 String  @id @default(cuid())
+  userId             String
+  type               String
+  provider           String
+  providerAccountId  String
+  refresh_token      String?
+  access_token       String?
+  expires_at         Int?
+  token_type         String?
+  scope              String?
+  id_token           String?
+  session_state      String?
+  user               User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id            String   @id @default(cuid())
+  sessionToken  String   @unique
+  userId        String
+  expires       DateTime
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model SiteConfig {
+  key   String @id
+  value String
+}
+
+model Project {
+  id          String   @id @default(cuid())
+  title       String
+  slug        String   @unique
+  description String
+  content     String   @default("")
+  coverImage  String   @default("")
+  demoUrl     String   @default("")
+  githubUrl   String   @default("")
+  tags        String   @default("")
+  published   Boolean  @default(false)
+  featured    Boolean  @default(false)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model AboutPage {
+  id        String   @id @default("about")
+  content   String
+  updatedAt DateTime @updatedAt
+}
+
+model FriendLink {
+  id          String   @id @default(cuid())
+  name        String
+  description String
+  url         String
+  avatar      String   @default("")
+  featured    Boolean  @default(false)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}

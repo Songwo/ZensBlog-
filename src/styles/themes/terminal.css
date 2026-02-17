@@ -1,0 +1,13 @@
+/* Terminal Theme — 暗色极客，Hacker 感 */
+[data-theme="terminal"] {
+  --color-bg: #0C0C0C;
+  --color-bg-secondary: #161616;
+  --color-text: #E0E0E0;
+  --color-text-secondary: #888888;
+  --color-accent: #4ADE80;
+  --color-border: #2A2A2A;
+  --font-heading: "JetBrains Mono", monospace;
+  --font-body: "JetBrains Mono", monospace;
+  --font-mono: "JetBrains Mono", monospace;
+  --line-height: 1.7;
+}

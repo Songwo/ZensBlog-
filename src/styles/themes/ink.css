@@ -1,0 +1,13 @@
+/* Ink Theme — 中文阅读优化，纸质感 */
+[data-theme="ink"] {
+  --color-bg: #FFFEF9;
+  --color-bg-secondary: #F5F3ED;
+  --color-text: #1A1A1A;
+  --color-text-secondary: #666666;
+  --color-accent: #B44B3A;
+  --color-border: #E0DDD5;
+  --font-heading: "Noto Serif SC", serif;
+  --font-body: "Noto Serif SC", serif;
+  --font-mono: "JetBrains Mono", monospace;
+  --line-height: 2.0;
+}

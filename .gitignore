@@ -1,0 +1,16 @@
+# Next.js
+.next/
+out/
+node_modules/
+.pnp*
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/sdks
+!.yarn/versions
+
+# 其他常见
+.env*
+*.log
+.DS_Store
