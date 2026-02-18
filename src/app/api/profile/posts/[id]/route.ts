@@ -1,6 +1,11 @@
 import { prisma } from "@/lib/db";
 import { auth } from "@/lib/auth";
-import { checkRateLimit, errorJson, isSameOrigin, normalizeString, safeJson } from "@/lib/api";
+import { checkRateLimit, errorJson, isSameOrigin, isValidHttpUrl, normalizeString, safeJson } from "@/lib/api";
+
+function parseTagIds(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return [...new Set(value.filter((item): item is string => typeof item === "string" && item.trim().length > 0))];
+}
 
 async function ensureOwner(postId: string, userId: string) {
   const post = await prisma.post.findUnique({
@@ -12,6 +17,9 @@ async function ensureOwner(postId: string, userId: string) {
       slug: true,
       excerpt: true,
       content: true,
+      coverImage: true,
+      categoryId: true,
+      tags: { select: { tagId: true } },
       published: true,
       type: true,
       createdAt: true,
@@ -52,20 +60,46 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     const payload = data as Record<string, unknown>;
     const title = normalizeString(payload.title, 180);
     const excerpt = normalizeString(payload.excerpt, 240);
-    const content = normalizeString(payload.content, 30_000);
+    const content = normalizeString(payload.content, 120_000);
+    const coverImage = normalizeString(payload.coverImage, 500);
+    const categoryId =
+      payload.categoryId === undefined
+        ? ownership.post?.categoryId || null
+        : typeof payload.categoryId === "string" && payload.categoryId.trim()
+          ? payload.categoryId.trim()
+          : null;
+    const tagIds = payload.tagIds === undefined ? undefined : parseTagIds(payload.tagIds);
     const published = Boolean(payload.published);
     if (!title || !content) return errorJson("标题与内容不能为空", 400);
+    if (coverImage && !coverImage.startsWith("/uploads/") && !isValidHttpUrl(coverImage)) {
+      return errorJson("封面图地址不合法", 400);
+    }
 
-    const updated = await prisma.post.update({
-      where: { id },
-      data: {
-        title,
-        excerpt: excerpt || content.slice(0, 140),
-        content,
-        published,
-        publishedAt: published ? ownership.post?.publishedAt || new Date() : null,
-      },
-      select: { id: true, slug: true },
+    const updated = await prisma.$transaction(async (tx) => {
+      const row = await tx.post.update({
+        where: { id },
+        data: {
+          title,
+          excerpt: excerpt || content.slice(0, 180),
+          content,
+          coverImage: coverImage || "",
+          categoryId,
+          published,
+          publishedAt: published ? ownership.post?.publishedAt || new Date() : null,
+        },
+        select: { id: true, slug: true },
+      });
+
+      if (tagIds !== undefined) {
+        await tx.postTag.deleteMany({ where: { postId: id } });
+        if (tagIds.length) {
+          await tx.postTag.createMany({
+            data: tagIds.map((tagId) => ({ postId: id, tagId })),
+          });
+        }
+      }
+
+      return row;
     });
 
     return safeJson({ success: true, post: updated });

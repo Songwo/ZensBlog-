@@ -26,6 +26,8 @@ export async function POST(request: Request) {
   try {
     const formData = await request.formData();
     const file = formData.get("file") as File;
+    const providerRaw = formData.get("provider");
+    const provider = providerRaw === "local" || providerRaw === "cloudinary" ? providerRaw : undefined;
     if (!file) return errorJson("未选择文件", 400);
     if (!(file.type in MIME_TO_EXT)) return errorJson("文件类型不支持，仅允许常见图片格式", 400);
     if (file.size > MAX_UPLOAD_SIZE) return errorJson("文件过大，最大支持 5MB", 400);
@@ -34,7 +36,7 @@ export async function POST(request: Request) {
     const buffer = Buffer.from(bytes);
 
     const ext = MIME_TO_EXT[file.type];
-    const uploaded = await uploadImage(buffer, file.type, ext);
+    const uploaded = await uploadImage(buffer, file.type, ext, provider);
 
     return safeJson({ url: uploaded.url, provider: uploaded.provider });
   } catch {

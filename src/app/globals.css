@@ -190,8 +190,8 @@ footer {
 }
 
 .user-avatar-btn {
-  width: 34px;
-  height: 34px;
+  width: 40px;
+  height: 40px;
   border-radius: 999px;
   border: 1px solid rgba(17, 24, 39, 0.16);
   background: rgba(255, 255, 255, 0.82);
@@ -199,7 +199,7 @@ footer {
   place-items: center;
   font-size: 0.76rem;
   color: #374151;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .user-avatar-card {
@@ -698,6 +698,53 @@ footer {
 .post-inline-image {
   border-radius: 0.75rem;
   border: 1px solid rgba(17, 24, 39, 0.1);
+}
+
+.md-code-row {
+  display: grid;
+  grid-template-columns: 2rem minmax(0, 1fr);
+  gap: 0.75rem;
+}
+
+.md-code-ln {
+  user-select: none;
+  text-align: right;
+  color: #9aa1b2;
+}
+
+.md-code-tx {
+  white-space: pre;
+}
+
+.md-table-wrap {
+  overflow-x: auto;
+}
+
+.md-row-even {
+  background: rgba(148, 163, 184, 0.06);
+}
+
+.md-row-odd {
+  background: transparent;
+}
+
+.prose blockquote {
+  border-left: 3px solid rgba(240, 93, 154, 0.55);
+  background: rgba(255, 241, 247, 0.6);
+  border-radius: 0.25rem;
+  padding: 0.5rem 0.8rem;
+}
+
+.prose details {
+  border: 1px solid rgba(17, 24, 39, 0.12);
+  border-radius: 0.6rem;
+  padding: 0.5rem 0.75rem;
+  background: rgba(255, 255, 255, 0.6);
+}
+
+.prose summary {
+  cursor: pointer;
+  font-weight: 600;
 }
 
 .post-code-lang {

@@ -1,17 +1,31 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { formatDate } from "@/lib/utils";
 import type { Metadata } from "next";
 import { AuthorCard } from "@/components/blog/AuthorCard";
+import { renderMarkdown } from "@/lib/markdown";
+import { MarkdownEnhancer } from "@/components/blog/MarkdownEnhancer";
 
 interface Props {
   params: Promise<{ slug: string }>;
 }
 
+function buildSlugCandidates(slug: string) {
+  const candidates = new Set<string>([slug]);
+  try {
+    const decoded = decodeURIComponent(slug);
+    if (decoded) candidates.add(decoded);
+  } catch {
+    // ignore invalid URI sequence
+  }
+  return Array.from(candidates);
+}
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
+  const candidates = buildSlugCandidates(slug);
   const post = await prisma.post.findFirst({
-    where: { slug, type: "COMMUNITY", published: true },
+    where: { slug: { in: candidates }, published: true },
     select: { title: true, excerpt: true },
   });
   if (!post) return {};
@@ -20,8 +34,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function CommunityDetailPage({ params }: Props) {
   const { slug } = await params;
+  const candidates = buildSlugCandidates(slug);
   const post = await prisma.post.findFirst({
-    where: { slug, type: "COMMUNITY", published: true },
+    where: { slug: { in: candidates }, published: true },
     include: {
       author: {
         select: {
@@ -40,6 +55,10 @@ export default async function CommunityDetailPage({ params }: Props) {
     },
   });
   if (!post) notFound();
+  if (post.type === "OFFICIAL") {
+    redirect(`/blog/${post.slug}`);
+  }
+  const content = await renderMarkdown(post.content);
 
   return (
     <div className="mx-auto w-full max-w-[980px] px-4 sm:px-8 py-12 fade-in-up">
@@ -56,9 +75,10 @@ export default async function CommunityDetailPage({ params }: Props) {
         <p className="mt-2">{formatDate(post.publishedAt || post.createdAt)}</p>
       </div>
       {post.excerpt && <p className="mt-4 text-[#64748b]">{post.excerpt}</p>}
-      <article className="mt-8 rounded-xl border border-[#eceff5] bg-white/70 p-6 whitespace-pre-wrap leading-8 text-[#334155]">
-        {post.content}
+      <article id="community-post-content" className="prose prose-base mt-8 max-w-none rounded-xl border border-[#eceff5] bg-white/70 p-6 leading-8 text-[#334155]">
+        {content}
       </article>
+      <MarkdownEnhancer containerId="community-post-content" />
     </div>
   );
 }

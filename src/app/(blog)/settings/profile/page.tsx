@@ -449,7 +449,7 @@ export default function ProfileSettingsPage() {
                 <>
                   {tab === "posts" && (
                     <div className="mt-4 flex items-center justify-end">
-                      <a href="/community/new" className="rounded-lg bg-indigo-600 px-3.5 py-2 text-sm text-white hover:bg-indigo-700">
+                      <a href="/settings/profile/posts/new" className="rounded-lg bg-indigo-600 px-3.5 py-2 text-sm text-white hover:bg-indigo-700">
                         新建文章
                       </a>
                     </div>
@@ -504,7 +504,7 @@ export default function ProfileSettingsPage() {
                       <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 px-4 py-8 text-center">
                         <p className="text-sm text-slate-500">{tab === "posts" ? "暂无记录，快去写第一篇文章吧！" : "暂无记录"}</p>
                         {tab === "posts" && (
-                          <a href="/community/new" className="mt-3 inline-flex rounded-lg bg-indigo-600 px-3 py-1.5 text-xs text-white hover:bg-indigo-700">
+                          <a href="/settings/profile/posts/new" className="mt-3 inline-flex rounded-lg bg-indigo-600 px-3 py-1.5 text-xs text-white hover:bg-indigo-700">
                             去写文章
                           </a>
                         )}

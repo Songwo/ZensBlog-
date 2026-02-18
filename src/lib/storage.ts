@@ -7,6 +7,7 @@ type UploadResult = {
   url: string;
   provider: "cloudinary" | "local";
 };
+type UploadProvider = UploadResult["provider"];
 
 const CLOUDINARY_CLOUD_NAME = process.env.CLOUDINARY_CLOUD_NAME;
 const CLOUDINARY_API_KEY = process.env.CLOUDINARY_API_KEY;
@@ -64,7 +65,13 @@ export async function uploadImage(
   buffer: Buffer,
   mimeType: string,
   extension: string,
+  preferredProvider?: UploadProvider,
 ): Promise<UploadResult> {
+  if (preferredProvider === "local") {
+    const localUrl = await uploadToLocal(buffer, extension);
+    return { url: localUrl, provider: "local" };
+  }
+
   if (canUseCloudinary()) {
     try {
       const url = await uploadToCloudinary(buffer, mimeType);

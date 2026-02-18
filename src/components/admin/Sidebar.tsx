@@ -13,6 +13,7 @@ const navItems = [
   { href: "/admin/now", label: "Now", icon: "今" },
   { href: "/admin/newsletter", label: "订阅", icon: "信" },
   { href: "/admin/categories", label: "分类", icon: "类" },
+  { href: "/admin/tags", label: "标签", icon: "标" },
   { href: "/admin/comments", label: "评论", icon: "评" },
   { href: "/admin/settings", label: "设置", icon: "设" },
 ];

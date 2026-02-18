@@ -27,7 +27,7 @@ export function UserAvatar({ user }: { user: UserAvatarInfo }) {
           src={user.image}
           alt={displayName}
           fallbackText={displayName}
-          sizeClassName="h-[34px] w-[34px]"
+          sizeClassName="h-[40px] w-[40px]"
           badgeIcon={activeBadge?.icon}
           badgeIconUrl={activeBadge?.iconUrl}
           badgeColor={activeBadge?.color}

@@ -11,10 +11,22 @@ interface Props {
   params: Promise<{ slug: string }>;
 }
 
+function buildSlugCandidates(slug: string) {
+  const candidates = new Set<string>([slug]);
+  try {
+    const decoded = decodeURIComponent(slug);
+    if (decoded) candidates.add(decoded);
+  } catch {
+    // ignore invalid URI sequence
+  }
+  return Array.from(candidates);
+}
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
+  const candidates = buildSlugCandidates(slug);
   const [post, settings] = await Promise.all([
-    prisma.post.findFirst({ where: { slug, type: "OFFICIAL" } }),
+    prisma.post.findFirst({ where: { slug: { in: candidates }, type: "OFFICIAL" } }),
     getSiteSettings(),
   ]);
   if (!post) return {};
@@ -45,8 +57,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function PostPage({ params }: Props) {
   const session = await auth();
   const { slug } = await params;
+  const candidates = buildSlugCandidates(slug);
   const post = await prisma.post.findFirst({
-    where: { slug, published: true, type: "OFFICIAL" },
+    where: { slug: { in: candidates }, published: true, type: "OFFICIAL" },
     include: {
       author: {
         select: {
@@ -101,8 +114,31 @@ export default async function PostPage({ params }: Props) {
   // Increment views
   await prisma.post.update({ where: { id: post.id }, data: { views: { increment: 1 } } });
 
-  const [content, authorConfig, prevPost, nextPost, relatedPosts, likeCount, viewerLike] = await Promise.all([
-    renderMarkdown(post.content),
+  const relatedWhere =
+    post.tags.length > 0
+      ? {
+          published: true as const,
+          type: "OFFICIAL" as const,
+          id: { not: post.id },
+          slug: { not: post.slug },
+          tags: { some: { tagId: { in: post.tags.map((t) => t.tagId) } } },
+        }
+      : {
+          published: true as const,
+          type: "OFFICIAL" as const,
+          id: { not: post.id },
+          slug: { not: post.slug },
+        };
+
+  const [content, authorConfig, prevPost, nextPost, relatedPostsRaw, likeCount, viewerLike] = await Promise.all([
+    renderMarkdown(post.content).catch((error) => {
+      console.error("[Post Render Error]", { slug: post.slug, error });
+      return (
+        <article className="prose prose-slate max-w-none">
+          <pre className="whitespace-pre-wrap break-words">{post.content}</pre>
+        </article>
+      );
+    }),
     prisma.siteConfig.findUnique({ where: { key: "authorName" } }),
     prisma.post.findFirst({
       where: { published: true, type: "OFFICIAL", publishedAt: { lt: post.publishedAt ?? new Date() } },
@@ -115,14 +151,7 @@ export default async function PostPage({ params }: Props) {
       orderBy: { publishedAt: "asc" },
     }),
     prisma.post.findMany({
-      where: {
-        published: true,
-        type: "OFFICIAL",
-        id: { not: post.id },
-        tags: {
-          some: { tagId: { in: post.tags.map((t) => t.tagId) } },
-        },
-      },
+      where: relatedWhere,
       select: { id: true, title: true, slug: true, excerpt: true, coverImage: true },
       orderBy: { publishedAt: "desc" },
       take: 6,
@@ -140,6 +169,10 @@ export default async function PostPage({ params }: Props) {
         })
       : Promise.resolve(null),
   ]);
+  const relatedPosts = relatedPostsRaw.map((item) => ({
+    ...item,
+    excerpt: (item.excerpt || "").replace(/\s+/g, " ").trim().slice(0, 120),
+  }));
   const toc = extractTOC(post.content);
 
   const displayAuthorName = post.author?.name || authorConfig?.value || "Zen";

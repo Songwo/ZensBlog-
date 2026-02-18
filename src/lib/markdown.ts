@@ -78,6 +78,31 @@ export interface TOCItem {
   level: number;
 }
 
+function normalizeFenceLines(source: string) {
+  const lines = source.replace(/\r\n/g, "\n").split("\n");
+  const fenceIndexes: number[] = [];
+
+  for (let i = 0; i < lines.length; i += 1) {
+    const trimmed = lines[i].trim();
+    const tildeFence = trimmed.match(/^~~~(\w+)?$/);
+    if (tildeFence) {
+      lines[i] = lines[i].replace(/^(\s*)~~~(\w+)?$/, (_m, ws, lang) => `${ws}\`\`\`${lang || ""}`);
+    }
+    if (/^\s*```/.test(lines[i])) {
+      fenceIndexes.push(i);
+    }
+  }
+
+  // If the fence count is odd, the last opener is likely accidental.
+  // Escape it to prevent the remainder of the article from collapsing into one code block.
+  if (fenceIndexes.length % 2 === 1) {
+    const idx = fenceIndexes[fenceIndexes.length - 1];
+    lines[idx] = lines[idx].replace("```", "\\```");
+  }
+
+  return lines.join("\n");
+}
+
 export function extractTOC(content: string): TOCItem[] {
   const headingRegex = /^(#{2,4})\s+(.+)$/gm;
   const items: TOCItem[] = [];
@@ -99,8 +124,9 @@ export function extractTOC(content: string): TOCItem[] {
 }
 
 export async function renderMarkdown(source: string) {
+  const normalized = normalizeFenceLines(source);
   const { content } = await compileMDX({
-    source,
+    source: normalized,
     options: {
       mdxOptions: {
         remarkPlugins: [remarkGfm],

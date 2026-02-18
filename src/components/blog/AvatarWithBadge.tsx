@@ -44,16 +44,16 @@ export function AvatarWithBadge({
       {hasBadge && (
         <span
           className={clsx(
-            "absolute bottom-0 right-0 translate-x-1/4 translate-y-1/4 rounded-full border-2 border-white shadow-sm flex items-center justify-center",
+            "absolute bottom-0 right-0 z-20 translate-x-1/4 translate-y-1/4 rounded-full border-2 border-white shadow-sm ring-1 ring-black/10 flex items-center justify-center",
             badgeSizeClassName
           )}
           style={{ backgroundColor: badgeColor || "#16a34a" }}
-          title={badgeTitle || "徽章"}
+          title={badgeTitle || "Badge"}
         >
           {badgeIconUrl ? (
             <Image src={badgeIconUrl} alt={badgeTitle || "badge"} width={16} height={16} className="h-3.5 w-3.5 rounded-full object-cover" />
           ) : (
-            <span className="text-[11px] leading-none text-white">{badgeIcon || "🍃"}</span>
+            <span className="text-[11px] leading-none text-white">{badgeIcon || "*"}</span>
           )}
         </span>
       )}

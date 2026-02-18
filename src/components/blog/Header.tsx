@@ -59,6 +59,12 @@ export function Header({ siteName }: { siteName: string }) {
         <div className="hidden md:flex items-center gap-3">
           {session?.user ? (
             <>
+              <Link href="/settings/profile/posts/new" className="theme-switch-btn">
+                写文章
+              </Link>
+              <Link href="/community/new" className="theme-switch-btn">
+                发帖子
+              </Link>
               <NotificationBell />
               <UserAvatar
                 user={{
@@ -132,6 +138,12 @@ export function Header({ siteName }: { siteName: string }) {
                 </Link>
               ) : (
                 <>
+                  <Link href="/settings/profile/posts/new" onClick={() => setMobileMenuOpen(false)} className="text-base py-2 text-[#2f3139] hover:text-[#f05d9a]">
+                    写文章
+                  </Link>
+                  <Link href="/community/new" onClick={() => setMobileMenuOpen(false)} className="text-base py-2 text-[#2f3139] hover:text-[#f05d9a]">
+                    发帖子
+                  </Link>
                   <Link href="/settings/profile" onClick={() => setMobileMenuOpen(false)} className="text-base py-2 text-[#2f3139] hover:text-[#f05d9a]">
                     个人设置
                   </Link>
