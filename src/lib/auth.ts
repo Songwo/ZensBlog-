@@ -82,27 +82,44 @@ const providers = [
       const username = String(credentials.username);
       const password = String(credentials.password);
 
-      const adminUsername = process.env.ADMIN_USERNAME || "admin";
+      const adminUsername = (process.env.ADMIN_USERNAME || "admin").trim();
       const adminPassword = process.env.ADMIN_PASSWORD || "admin123";
-      const adminEmail = process.env.ADMIN_EMAIL || "admin@zensblog.dev";
+      const adminEmail = (process.env.ADMIN_EMAIL || "admin@zensblog.dev").trim().toLowerCase();
 
       if (username === adminUsername && password === adminPassword) {
         const secureHash = await hash(adminPassword, 12);
-        const admin = await prisma.user.upsert({
+
+        const existingByUsername = await prisma.user.findUnique({
           where: { username: adminUsername },
-          update: {
-            role: "ADMIN",
-            passwordHash: secureHash,
-            email: adminEmail,
-          },
-          create: {
-            username: adminUsername,
-            email: adminEmail,
-            passwordHash: secureHash,
-            role: "ADMIN",
-            name: adminUsername,
-          },
+          select: { id: true },
         });
+        const existingByEmail = !existingByUsername
+          ? await prisma.user.findUnique({
+              where: { email: adminEmail },
+              select: { id: true },
+            })
+          : null;
+
+        const admin = existingByUsername || existingByEmail
+          ? await prisma.user.update({
+              where: { id: (existingByUsername || existingByEmail)!.id },
+              data: {
+                username: adminUsername,
+                role: "ADMIN",
+                passwordHash: secureHash,
+                email: adminEmail,
+                name: adminUsername,
+              },
+            })
+          : await prisma.user.create({
+              data: {
+                username: adminUsername,
+                email: adminEmail,
+                passwordHash: secureHash,
+                role: "ADMIN",
+                name: adminUsername,
+              },
+            });
 
         return {
           id: admin.id,
@@ -141,16 +158,27 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       if (account?.provider !== "github" || !user?.id || !profile) return true;
 
       try {
+        const linked = await prisma.account.findUnique({
+          where: {
+            provider_providerAccountId: {
+              provider: "github",
+              providerAccountId: account.providerAccountId,
+            },
+          },
+          select: { userId: true },
+        });
+        const dbUserId = linked?.userId || user.id;
+
         const existing = await prisma.user.findUnique({
-          where: { id: user.id },
+          where: { id: dbUserId },
           select: { githubSyncedAt: true },
         });
 
         // Auto-sync on first GitHub login. Later refreshes are manual.
         if (!existing?.githubSyncedAt) {
-          await syncGitHubProfileToUser(user.id, profile);
+          await syncGitHubProfileToUser(dbUserId, profile);
         }
-        await awardBadgesForUser(user.id);
+        await awardBadgesForUser(dbUserId);
       } catch (err) {
         console.error("[Auth GitHub Sync Error]", err);
       }
