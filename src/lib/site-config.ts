@@ -31,45 +31,49 @@ const DEFAULT_SETTINGS: SiteSettings = {
 
 const loadSiteSettings = unstable_cache(
   async (): Promise<SiteSettings> => {
-    const configs = await prisma.siteConfig.findMany({
-      where: {
-        key: {
-          in: [
-            "siteName",
-            "siteDescription",
-            "siteUrl",
-            "authorName",
-            "effectsLevel",
-            "rewardQrImage",
-            "rewardText",
-            "adTitle",
-            "adDescription",
-            "adImage",
-            "adLink",
-          ],
+    try {
+      const configs = await prisma.siteConfig.findMany({
+        where: {
+          key: {
+            in: [
+              "siteName",
+              "siteDescription",
+              "siteUrl",
+              "authorName",
+              "effectsLevel",
+              "rewardQrImage",
+              "rewardText",
+              "adTitle",
+              "adDescription",
+              "adImage",
+              "adLink",
+            ],
+          },
         },
-      },
-    });
+      });
 
-    const configMap = Object.fromEntries(configs.map((item) => [item.key, item.value]));
-    const effectsLevel =
-      configMap.effectsLevel === "low" || configMap.effectsLevel === "ultra"
-        ? configMap.effectsLevel
-        : "medium";
+      const configMap = Object.fromEntries(configs.map((item) => [item.key, item.value]));
+      const effectsLevel =
+        configMap.effectsLevel === "low" || configMap.effectsLevel === "ultra"
+          ? configMap.effectsLevel
+          : "medium";
 
-    return {
-      siteName: configMap.siteName || DEFAULT_SETTINGS.siteName,
-      siteDescription: configMap.siteDescription || DEFAULT_SETTINGS.siteDescription,
-      siteUrl: configMap.siteUrl || DEFAULT_SETTINGS.siteUrl,
-      authorName: configMap.authorName || DEFAULT_SETTINGS.authorName,
-      effectsLevel,
-      rewardQrImage: configMap.rewardQrImage || DEFAULT_SETTINGS.rewardQrImage,
-      rewardText: configMap.rewardText || DEFAULT_SETTINGS.rewardText,
-      adTitle: configMap.adTitle || DEFAULT_SETTINGS.adTitle,
-      adDescription: configMap.adDescription || DEFAULT_SETTINGS.adDescription,
-      adImage: configMap.adImage || DEFAULT_SETTINGS.adImage,
-      adLink: configMap.adLink || DEFAULT_SETTINGS.adLink,
-    };
+      return {
+        siteName: configMap.siteName || DEFAULT_SETTINGS.siteName,
+        siteDescription: configMap.siteDescription || DEFAULT_SETTINGS.siteDescription,
+        siteUrl: configMap.siteUrl || DEFAULT_SETTINGS.siteUrl,
+        authorName: configMap.authorName || DEFAULT_SETTINGS.authorName,
+        effectsLevel,
+        rewardQrImage: configMap.rewardQrImage || DEFAULT_SETTINGS.rewardQrImage,
+        rewardText: configMap.rewardText || DEFAULT_SETTINGS.rewardText,
+        adTitle: configMap.adTitle || DEFAULT_SETTINGS.adTitle,
+        adDescription: configMap.adDescription || DEFAULT_SETTINGS.adDescription,
+        adImage: configMap.adImage || DEFAULT_SETTINGS.adImage,
+        adLink: configMap.adLink || DEFAULT_SETTINGS.adLink,
+      };
+    } catch {
+      return DEFAULT_SETTINGS;
+    }
   },
   ["site-settings"],
   { tags: ["site-settings"], revalidate: 300 },
