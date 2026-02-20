@@ -54,6 +54,9 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   const ownership = await ensureOwner(id, session.user.id);
   if (ownership.error) return ownership.error;
 
+  const role = (session.user as { role?: string }).role || "USER";
+  const isAdmin = role.toUpperCase() === "ADMIN" || role === "admin";
+
   try {
     const data: unknown = await request.json();
     if (!data || typeof data !== "object" || Array.isArray(data)) return errorJson("请求体格式错误", 400);
@@ -69,7 +72,11 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
           ? payload.categoryId.trim()
           : null;
     const tagIds = payload.tagIds === undefined ? undefined : parseTagIds(payload.tagIds);
-    const published = Boolean(payload.published);
+    const requestedPublished = Boolean(payload.published);
+    const published = isAdmin ? requestedPublished : false;
+    const status = isAdmin
+      ? (published ? "PUBLISHED" : "DRAFT")
+      : "PENDING";
     if (!title || !content) return errorJson("标题与内容不能为空", 400);
     if (coverImage && !coverImage.startsWith("/uploads/") && !isValidHttpUrl(coverImage)) {
       return errorJson("封面图地址不合法", 400);
@@ -85,6 +92,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
           coverImage: coverImage || "",
           categoryId,
           published,
+          status,
           publishedAt: published ? ownership.post?.publishedAt || new Date() : null,
         },
         select: { id: true, slug: true },

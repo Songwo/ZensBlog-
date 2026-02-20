@@ -32,8 +32,10 @@ export async function GET(request: Request) {
   where.type = "OFFICIAL";
   if (!isAdmin) {
     where.published = true;
+    where.status = "PUBLISHED";
   } else if (published === "true") {
     where.published = true;
+    where.status = "PUBLISHED";
   } else if (published === "false") {
     where.published = false;
   }
@@ -87,6 +89,7 @@ export async function POST(request: Request) {
     if (existing) return errorJson("slug 已存在", 409);
 
     const post = await prisma.$transaction(async (tx) => {
+      const nextStatus = published ? "PUBLISHED" : "DRAFT";
       const created = await tx.post.create({
         data: {
           title,
@@ -97,6 +100,7 @@ export async function POST(request: Request) {
           published,
           pinned,
           type: "OFFICIAL",
+          status: nextStatus,
           categoryId,
           publishedAt: published ? new Date() : null,
         },

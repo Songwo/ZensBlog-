@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { Bell } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 type NotificationItem = {
   id: string;
@@ -19,23 +19,40 @@ export function NotificationBell() {
   const [loading, setLoading] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [items, setItems] = useState<NotificationItem[]>([]);
+  const latestAtRef = useRef(0);
 
-  async function loadNotifications() {
-    setLoading(true);
+  async function loadNotifications(mode: "full" | "incremental" = "full") {
+    if (mode === "full") setLoading(true);
     try {
-      const res = await fetch("/api/notifications", { cache: "no-store" });
+      const query = mode === "incremental" && latestAtRef.current > 0 ? `?since=${latestAtRef.current}` : "";
+      const res = await fetch(`/api/notifications${query}`, { cache: "no-store" });
       const data = await res.json();
       if (!res.ok) return;
       setUnreadCount(data.unreadCount || 0);
-      setItems(Array.isArray(data.notifications) ? data.notifications : []);
+
+      const incoming = Array.isArray(data.notifications) ? (data.notifications as NotificationItem[]) : [];
+      if (mode === "incremental") {
+        setItems((prev) => {
+          const merged = [...incoming, ...prev];
+          const dedup = Array.from(new Map(merged.map((n) => [n.id, n])).values());
+          return dedup.slice(0, 30);
+        });
+      } else {
+        setItems(incoming);
+      }
+
+      const newest = incoming[0]?.createdAt ? new Date(incoming[0].createdAt).getTime() : 0;
+      if (newest > latestAtRef.current) latestAtRef.current = newest;
     } finally {
-      setLoading(false);
+      if (mode === "full") setLoading(false);
     }
   }
 
   useEffect(() => {
-    loadNotifications();
-    const timer = setInterval(loadNotifications, 30_000);
+    void loadNotifications("full");
+    const timer = setInterval(() => {
+      void loadNotifications("incremental");
+    }, 10_000);
     return () => clearInterval(timer);
   }, []);
 
@@ -66,7 +83,7 @@ export function NotificationBell() {
         onClick={() => {
           const next = !open;
           setOpen(next);
-          if (next) loadNotifications();
+          if (next) void loadNotifications("full");
         }}
         className="relative h-9 w-9 rounded-full border border-[#e2e8f0] bg-white/80 flex items-center justify-center hover:bg-white"
         aria-label="通知中心"
@@ -83,7 +100,7 @@ export function NotificationBell() {
         <div className="absolute right-0 mt-2 w-[340px] rounded-xl border border-[#e2e8f0] bg-white shadow-lg z-[80]">
           <div className="px-3 py-2 border-b border-[#eef2f7] flex items-center justify-between">
             <p className="text-sm font-semibold text-[#0f172a]">通知中心</p>
-            <button type="button" onClick={markAllRead} className="text-xs text-[#475569] hover:text-[#111827]">
+            <button type="button" onClick={() => void markAllRead()} className="text-xs text-[#475569] hover:text-[#111827]">
               全部已读
             </button>
           </div>
@@ -105,7 +122,7 @@ export function NotificationBell() {
                           type="button"
                           onClick={(e) => {
                             e.preventDefault();
-                            markRead(item.id);
+                            void markRead(item.id);
                           }}
                           className="text-[11px] text-[#2563eb]"
                         >

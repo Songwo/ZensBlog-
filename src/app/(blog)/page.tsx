@@ -6,7 +6,7 @@ export default async function HomePage() {
   const settings = await getSiteSettings();
 
   const pinnedPost = await prisma.post.findFirst({
-    where: { published: true, pinned: true, type: "OFFICIAL" },
+    where: { published: true, status: "PUBLISHED", hiddenByReports: false, pinned: true, type: "OFFICIAL" },
     include: { category: true, tags: { include: { tag: true } }, _count: { select: { likes: true, comments: true } } },
     orderBy: { publishedAt: "desc" },
   });
@@ -14,6 +14,8 @@ export default async function HomePage() {
   const recentPosts = await prisma.post.findMany({
     where: {
       published: true,
+      status: "PUBLISHED",
+      hiddenByReports: false,
       type: "OFFICIAL",
       ...(pinnedPost ? { id: { not: pinnedPost.id } } : {}),
     },
@@ -37,6 +39,23 @@ export default async function HomePage() {
     where: { featured: true },
     orderBy: { sortOrder: "asc" },
     take: 6,
+  });
+
+  const owner = await prisma.user.findFirst({
+    where: {
+      OR: [{ role: "ADMIN" }, { posts: { some: { published: true } } }],
+    },
+    orderBy: [{ role: "desc" }, { createdAt: "asc" }],
+    select: {
+      name: true,
+      bio: true,
+      image: true,
+      githubProfile: true,
+      email: true,
+      website: true,
+      _count: { select: { posts: true, comments: true } },
+      posts: { where: { published: true }, select: { views: true } },
+    },
   });
 
   return (
@@ -99,6 +118,31 @@ export default async function HomePage() {
         url: friend.url,
         avatar: friend.avatar,
       }))}
+      authorProfile={
+        owner
+          ? {
+              name: owner.name || settings.siteName || "博主",
+              bio: owner.bio || settings.siteDescription || "",
+              image: owner.image || null,
+              githubProfile: owner.githubProfile || null,
+              email: owner.email || null,
+              website: owner.website || null,
+              stats: {
+                posts: owner._count.posts,
+                comments: owner._count.comments,
+                views: owner.posts.reduce((sum, post) => sum + post.views, 0),
+              },
+            }
+          : {
+              name: settings.siteName || "博主",
+              bio: settings.siteDescription || "",
+              image: null,
+              githubProfile: null,
+              email: null,
+              website: null,
+              stats: { posts: 0, comments: 0, views: 0 },
+            }
+      }
     />
   );
 }

@@ -7,7 +7,7 @@ export const metadata: Metadata = { title: "归档" };
 
 export default async function ArchivesPage() {
   const posts = await prisma.post.findMany({
-    where: { published: true, type: "OFFICIAL" },
+    where: { published: true, status: "PUBLISHED", hiddenByReports: false, type: "OFFICIAL" },
     select: { title: true, slug: true, publishedAt: true, category: { select: { name: true, slug: true } } },
     orderBy: { publishedAt: "desc" },
   });

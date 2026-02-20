@@ -32,6 +32,7 @@ export function PostEditor({ post, categories, allTags }: PostEditorProps) {
   const editorRef = useRef<HTMLTextAreaElement | null>(null);
   const inlineUploadRef = useRef<HTMLInputElement | null>(null);
   const previewRef = useRef<HTMLDivElement | null>(null);
+  const syncSourceRef = useRef<"editor" | "preview" | null>(null);
   const [form, setForm] = useState({
     title: post?.title || "",
     slug: post?.slug || "",
@@ -61,6 +62,45 @@ export function PostEditor({ post, categories, allTags }: PostEditorProps) {
     const root = previewRef.current;
     if (!root) return;
     root.id = "admin-post-preview";
+  }, []);
+
+  useEffect(() => {
+    const editor = editorRef.current;
+    const preview = previewRef.current;
+    if (!editor || !preview) return;
+
+    const syncScroll = (from: HTMLElement, to: HTMLElement) => {
+      const fromMax = from.scrollHeight - from.clientHeight;
+      const toMax = to.scrollHeight - to.clientHeight;
+      if (fromMax <= 0 || toMax <= 0) return;
+      to.scrollTop = (from.scrollTop / fromMax) * toMax;
+    };
+
+    const onEditorScroll = () => {
+      if (syncSourceRef.current === "preview") return;
+      syncSourceRef.current = "editor";
+      syncScroll(editor, preview);
+      requestAnimationFrame(() => {
+        syncSourceRef.current = null;
+      });
+    };
+
+    const onPreviewScroll = () => {
+      if (syncSourceRef.current === "editor") return;
+      syncSourceRef.current = "preview";
+      syncScroll(preview, editor);
+      requestAnimationFrame(() => {
+        syncSourceRef.current = null;
+      });
+    };
+
+    editor.addEventListener("scroll", onEditorScroll, { passive: true });
+    preview.addEventListener("scroll", onPreviewScroll, { passive: true });
+
+    return () => {
+      editor.removeEventListener("scroll", onEditorScroll);
+      preview.removeEventListener("scroll", onPreviewScroll);
+    };
   }, []);
 
   function toggleTag(tagId: string) {
@@ -233,7 +273,7 @@ export function PostEditor({ post, categories, allTags }: PostEditorProps) {
                   onChange={(e) => setForm({ ...form, content: e.target.value })}
                   rows={24}
                   required
-                  className="w-full px-3 py-2.5 bg-bg-secondary border border-border rounded-lg text-sm font-mono resize-y focus:outline-none focus:border-accent leading-relaxed"
+                  className="h-[620px] w-full overflow-y-auto px-3 py-2.5 bg-bg-secondary border border-border rounded-lg text-sm font-mono resize-none focus:outline-none focus:border-accent leading-relaxed"
                   placeholder="使用 Markdown 编写文章内容..."
                 />
               </section>
@@ -247,7 +287,7 @@ export function PostEditor({ post, categories, allTags }: PostEditorProps) {
                 </div>
                 <div
                   ref={previewRef}
-                  className="prose prose-sm max-w-none rounded-lg border border-border bg-white p-4 min-h-[620px] overflow-visible"
+                  className="prose prose-sm max-w-none rounded-lg border border-border bg-white p-4 h-[620px] overflow-y-auto"
                   dangerouslySetInnerHTML={{ __html: previewHtml || "<p>暂无内容</p>" }}
                 />
                 <MarkdownEnhancer containerId="admin-post-preview" onImageClick={setLightboxImage} />

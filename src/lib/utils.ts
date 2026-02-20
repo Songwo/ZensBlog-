@@ -26,6 +26,36 @@ export function truncate(str: string, length: number): string {
   return str.slice(0, length) + "...";
 }
 
+export function stripMarkdownToText(content: string): string {
+  if (!content) return "";
+
+  return content
+    .replace(/\r\n/g, "\n")
+    .replace(/```[\s\S]*?```/g, " ")
+    .replace(/~~~[\s\S]*?~~~/g, " ")
+    .replace(/^ {4,}.*$/gm, " ")
+    .replace(/`([^`]+)`/g, "$1")
+    .replace(/!\[[^\]]*\]\([^)]+\)/g, " ")
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+    .replace(/^#{1,6}\s+/gm, "")
+    .replace(/^>\s?/gm, "")
+    .replace(/^[-*+]\s+/gm, "")
+    .replace(/^\d+\.\s+/gm, "")
+    .replace(/[*_~]/g, "")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+export function buildPostSummary(excerpt: string | null | undefined, content: string, maxLength = 160): string {
+  const cleanExcerpt = stripMarkdownToText(excerpt || "");
+  if (cleanExcerpt) {
+    return cleanExcerpt.slice(0, maxLength);
+  }
+  const cleanContent = stripMarkdownToText(content);
+  return cleanContent.slice(0, maxLength);
+}
+
 export function getPageRange(current: number, total: number): number[] {
   const range: number[] = [];
   const start = Math.max(1, current - 2);
@@ -42,15 +72,7 @@ export function getPageRange(current: number, total: number): number[] {
 export function calculateReadingTime(content: string): number {
   if (!content) return 1;
 
-  // 移除 Markdown 语法
-  const plainText = content
-    .replace(/```[\s\S]*?```/g, "") // 代码块
-    .replace(/`[^`]+`/g, "") // 行内代码
-    .replace(/!\[.*?\]\(.*?\)/g, "") // 图片
-    .replace(/\[([^\]]+)\]\([^\)]+\)/g, "$1") // 链接
-    .replace(/#{1,6}\s/g, "") // 标题
-    .replace(/[*_~`]/g, "") // 格式化符号
-    .replace(/\n+/g, " "); // 换行
+  const plainText = stripMarkdownToText(content);
 
   // 计算字数
   const chineseChars = (plainText.match(/[\u4e00-\u9fff]/g) || []).length;

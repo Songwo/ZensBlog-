@@ -3,12 +3,12 @@ import { isValidHttpUrl } from "@/lib/api";
 
 export async function GET() {
   const posts = await prisma.post.findMany({
-    where: { published: true, type: "OFFICIAL" },
+    where: { published: true, status: "PUBLISHED", hiddenByReports: false, type: "OFFICIAL" },
     select: { slug: true, updatedAt: true },
     orderBy: { updatedAt: "desc" },
   });
   const communityPosts = await prisma.post.findMany({
-    where: { published: true, type: "COMMUNITY" },
+    where: { published: true, status: "PUBLISHED", hiddenByReports: false, type: "COMMUNITY" },
     select: { slug: true, updatedAt: true },
     orderBy: { updatedAt: "desc" },
   });

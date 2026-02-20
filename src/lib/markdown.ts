@@ -2,10 +2,10 @@ import { compileMDX } from "next-mdx-remote/rsc";
 import remarkGfm from "remark-gfm";
 import rehypeSlug from "rehype-slug";
 import rehypeAutolinkHeadings from "rehype-autolink-headings";
-import rehypeRaw from "rehype-raw";
 import { createHighlighter } from "shiki";
 import type { Root, Element, Text } from "hast";
 import type { Plugin } from "unified";
+import { findEmoji } from "@/lib/emoji";
 
 let highlighterPromise: ReturnType<typeof createHighlighter> | null = null;
 
@@ -72,6 +72,64 @@ const rehypeShiki: Plugin<[], Root> = () => {
   };
 };
 
+const rehypeEmoji: Plugin<[], Root> = () => {
+  return async (tree: Root) => {
+    const { visit } = await import("unist-util-visit");
+
+    visit(tree, "text", (node: Text, index, parent) => {
+      if (!parent || typeof index !== "number") return;
+      const parentTag = (parent as Element).tagName || "";
+      if (parentTag === "code" || parentTag === "pre") return;
+
+      const value = node.value || "";
+      if (!/:([a-zA-Z0-9_+\-]+):/.test(value)) return;
+
+      const parts: Array<Text | Element> = [];
+      let lastIndex = 0;
+      const regex = /:([a-zA-Z0-9_+\-]+):/g;
+      let match: RegExpExecArray | null;
+
+      while ((match = regex.exec(value)) !== null) {
+        const [raw, key] = match;
+        const start = match.index;
+        const end = start + raw.length;
+        if (start > lastIndex) {
+          parts.push({ type: "text", value: value.slice(lastIndex, start) });
+        }
+
+        const found = findEmoji(key);
+        if (!found) {
+          parts.push({ type: "text", value: raw });
+        } else if (found.unicode) {
+          parts.push({ type: "text", value: found.unicode });
+        } else if (found.image) {
+          parts.push({
+            type: "element",
+            tagName: "img",
+            properties: {
+              src: found.image,
+              alt: `:${key}:`,
+              className: ["emoji-inline", "emoji-custom"],
+              loading: "lazy",
+              decoding: "async",
+            },
+            children: [],
+          });
+        }
+        lastIndex = end;
+      }
+
+      if (lastIndex < value.length) {
+        parts.push({ type: "text", value: value.slice(lastIndex) });
+      }
+
+      if (parts.length > 0) {
+        (parent.children as Array<Text | Element>).splice(index, 1, ...parts);
+      }
+    });
+  };
+};
+
 export interface TOCItem {
   id: string;
   text: string;
@@ -80,24 +138,16 @@ export interface TOCItem {
 
 function normalizeFenceLines(source: string) {
   const lines = source.replace(/\r\n/g, "\n").split("\n");
-  const fenceIndexes: number[] = [];
 
   for (let i = 0; i < lines.length; i += 1) {
     const trimmed = lines[i].trim();
-    const tildeFence = trimmed.match(/^~~~(\w+)?$/);
+    const tildeFence = trimmed.match(/^~~~\s*([A-Za-z0-9_+-]+)?\s*$/);
     if (tildeFence) {
-      lines[i] = lines[i].replace(/^(\s*)~~~(\w+)?$/, (_m, ws, lang) => `${ws}\`\`\`${lang || ""}`);
+      lines[i] = lines[i].replace(
+        /^(\s*)~~~\s*([A-Za-z0-9_+-]+)?\s*$/,
+        (_m, ws, lang) => `${ws}\`\`\`${lang || ""}`,
+      );
     }
-    if (/^\s*```/.test(lines[i])) {
-      fenceIndexes.push(i);
-    }
-  }
-
-  // If the fence count is odd, the last opener is likely accidental.
-  // Escape it to prevent the remainder of the article from collapsing into one code block.
-  if (fenceIndexes.length % 2 === 1) {
-    const idx = fenceIndexes[fenceIndexes.length - 1];
-    lines[idx] = lines[idx].replace("```", "\\```");
   }
 
   return lines.join("\n");
@@ -133,8 +183,8 @@ export async function renderMarkdown(source: string) {
         rehypePlugins: [
           rehypeSlug,
           [rehypeAutolinkHeadings, { behavior: "wrap" }],
+          rehypeEmoji,
           rehypeShiki,
-          rehypeRaw,
         ],
       },
     },

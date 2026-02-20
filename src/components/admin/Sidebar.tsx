@@ -15,6 +15,7 @@ const navItems = [
   { href: "/admin/categories", label: "分类", icon: "类" },
   { href: "/admin/tags", label: "标签", icon: "标" },
   { href: "/admin/comments", label: "评论", icon: "评" },
+  { href: "/admin/reports", label: "举报", icon: "举" },
   { href: "/admin/settings", label: "设置", icon: "设" },
 ];
 
@@ -22,8 +23,8 @@ export function Sidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="admin-sidebar w-56 min-h-screen flex flex-col">
-      <div className="p-4 border-b border-border">
+    <aside className="admin-sidebar sticky top-0 h-screen w-60 min-h-screen border-r border-border/80 bg-bg/90 backdrop-blur flex flex-col">
+      <div className="border-b border-border p-4">
         <Link href="/admin" className="font-heading text-lg font-bold">
           Zen&apos;s Blog
         </Link>

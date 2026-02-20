@@ -58,6 +58,15 @@ interface CyberHomeProps {
   categories: CyberCategory[];
   featuredProjects: FeaturedProject[];
   featuredFriends: FeaturedFriend[];
+  authorProfile: {
+    name: string;
+    bio: string;
+    image: string | null;
+    githubProfile: string | null;
+    email: string | null;
+    website: string | null;
+    stats: { posts: number; comments: number; views: number };
+  } | null;
 }
 
 export function CyberHome({
@@ -69,6 +78,7 @@ export function CyberHome({
   categories,
   featuredProjects,
   featuredFriends,
+  authorProfile,
 }: CyberHomeProps) {
   const router = useRouter();
   const [query, setQuery] = useState("");
@@ -245,6 +255,32 @@ export function CyberHome({
           <div className="mx-auto max-w-2xl">
             <NewsletterSignup />
           </div>
+
+          {authorProfile && (
+            <div className="mx-auto mt-8 max-w-3xl rounded-xl border border-[#eceff5] bg-white/60 p-4 backdrop-blur-md shadow-[0_8px_24px_rgba(17,24,39,0.06)]">
+              <div className="flex flex-col items-center gap-3 text-center sm:flex-row sm:text-left">
+                {authorProfile.image ? (
+                  <Image src={authorProfile.image} alt={authorProfile.name} width={56} height={56} className="h-14 w-14 rounded-full border border-[#e2e8f0] object-cover" />
+                ) : (
+                  <div className="grid h-14 w-14 place-items-center rounded-full border border-[#e2e8f0] bg-white/80 text-sm font-semibold text-[#475569]">
+                    {authorProfile.name.charAt(0)}
+                  </div>
+                )}
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-[#0f172a]">{authorProfile.name}</p>
+                  <p className="mt-1 text-xs text-[#64748b]">{authorProfile.bio || "这个人很神秘，暂未留下简介。"}</p>
+                  <div className="mt-2 flex flex-wrap items-center justify-center gap-2 text-xs text-[#475569] sm:justify-start">
+                    <span>文章 {authorProfile.stats.posts}</span>
+                    <span>评论 {authorProfile.stats.comments}</span>
+                    <span>阅读 {authorProfile.stats.views}</span>
+                    {authorProfile.githubProfile && <a href={authorProfile.githubProfile} target="_blank" rel="noreferrer" className="text-[#2563eb] hover:underline">GitHub</a>}
+                    {authorProfile.website && <a href={authorProfile.website} target="_blank" rel="noreferrer" className="text-[#2563eb] hover:underline">主页</a>}
+                    {authorProfile.email && <a href={`mailto:${authorProfile.email}`} className="text-[#2563eb] hover:underline">邮箱</a>}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </section>
 

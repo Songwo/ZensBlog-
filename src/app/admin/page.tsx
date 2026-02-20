@@ -4,9 +4,9 @@ import Link from "next/link";
 export default async function AdminDashboard() {
   const [postCount, publishedCount, commentCount, pendingComments, recentPosts] = await Promise.all([
     prisma.post.count({ where: { type: "OFFICIAL" } }),
-    prisma.post.count({ where: { published: true, type: "OFFICIAL" } }),
+    prisma.post.count({ where: { published: true, status: "PUBLISHED", type: "OFFICIAL" } }),
     prisma.comment.count(),
-    prisma.comment.count({ where: { approved: false } }),
+    prisma.comment.count({ where: { status: "PENDING" } }),
     prisma.post.findMany({
       where: { type: "OFFICIAL" },
       orderBy: { createdAt: "desc" },

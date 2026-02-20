@@ -1,3 +1,5 @@
+import { parseEmojiHtml } from "@/lib/emoji";
+
 export function escapeHtml(input: string) {
   return input
     .replaceAll("&", "&amp;")
@@ -15,12 +17,47 @@ export function toHeadingId(text: string) {
 }
 
 function renderInline(text: string) {
-  return escapeHtml(text)
-    .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img alt="$1" src="$2" />')
-    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noreferrer">$1</a>')
+  const inlineCodeTokens: string[] = [];
+  const inlineLinkTokens: string[] = [];
+  const stashInlineCode = (input: string) =>
+    input.replace(/`([^`]+)`/g, (_m, code) => {
+      const token = `__INLINE_CODE_${inlineCodeTokens.length}__`;
+      inlineCodeTokens.push(`<code>${escapeHtml(code)}</code>`);
+      return token;
+    });
+
+  const restoreInlineCode = (input: string) =>
+    input.replace(/__INLINE_CODE_(\d+)__/g, (_m, idx) => inlineCodeTokens[Number(idx)] || "");
+
+  const stashMarkdownLinks = (input: string) =>
+    input
+      .replace(/!\[([^\]]*)\]\((https?:\/\/[^)\s]+|\/[^)\s]+)\)/g, (_m, alt, src) => {
+        const token = `__INLINE_LINK_${inlineLinkTokens.length}__`;
+        inlineLinkTokens.push(`<img alt="${alt}" src="${src}" />`);
+        return token;
+      })
+      .replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+|\/[^)\s]+)\)/g, (_m, label, href) => {
+        const token = `__INLINE_LINK_${inlineLinkTokens.length}__`;
+        inlineLinkTokens.push(`<a href="${href}" target="_blank" rel="noreferrer">${label}</a>`);
+        return token;
+      });
+
+  const restoreMarkdownLinks = (input: string) =>
+    input.replace(/__INLINE_LINK_(\d+)__/g, (_m, idx) => inlineLinkTokens[Number(idx)] || "");
+
+  const linkify = (input: string) =>
+    input.replace(/(^|[\s(>])((https?:\/\/[^\s<)]+))/g, (_m, prefix, url) => {
+      return `${prefix}<a href="${url}" target="_blank" rel="noreferrer" data-auto-link="1">${url}</a>`;
+    });
+
+  const escaped = escapeHtml(text);
+  const protectedText = stashMarkdownLinks(stashInlineCode(escaped));
+
+  const rendered = protectedText
     .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
-    .replace(/\*([^*]+)\*/g, "<em>$1</em>")
-    .replace(/`([^`]+)`/g, "<code>$1</code>");
+    .replace(/\*([^*]+)\*/g, "<em>$1</em>");
+
+  return parseEmojiHtml(restoreInlineCode(restoreMarkdownLinks(linkify(rendered))));
 }
 
 export function markdownToHtml(markdown: string) {
@@ -30,7 +67,7 @@ export function markdownToHtml(markdown: string) {
 
   while (i < lines.length) {
     const line = lines[i];
-    const codeMatch = line.match(/^```([\w-]+)?\s*$/);
+    const codeMatch = line.match(/^```([\w+-]+)?\s*$/);
     if (codeMatch) {
       const lang = (codeMatch[1] || "text").toLowerCase();
       i += 1;
@@ -46,6 +83,18 @@ export function markdownToHtml(markdown: string) {
         .join("");
       out.push(`<pre><code class="language-${lang}">${numbered}</code></pre>`);
       i += 1;
+      continue;
+    }
+
+    if (/^ {4,}\S/.test(line)) {
+      const buf: string[] = [line.replace(/^ {4}/, "")];
+      i += 1;
+      while (i < lines.length && (/^ {4,}/.test(lines[i]) || !lines[i].trim())) {
+        buf.push(lines[i].replace(/^ {4}/, ""));
+        i += 1;
+      }
+      const code = escapeHtml(buf.join("\n"));
+      out.push(`<pre><code class="language-text">${code}</code></pre>`);
       continue;
     }
 
@@ -123,4 +172,3 @@ export function markdownToHtml(markdown: string) {
 
   return out.join("\n") || "<p class=\"text-sm text-slate-500\">暂无内容</p>";
 }
-

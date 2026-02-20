@@ -37,7 +37,15 @@ export function AuthorCard({
   const compact = variant === "compact";
   return (
     <div className={className}>
-      <AuthorMini name={name} username={username} image={image} title={title} badge={badge} size={compact ? "sm" : "md"} />
+      <AuthorMini
+        name={name}
+        username={username}
+        image={image}
+        title={title}
+        badge={badge}
+        size={compact ? "sm" : "md"}
+        enablePreview
+      />
       {!compact && username ? <p className="mt-1 text-xs text-[#64748b]">@{username}</p> : null}
       {bio ? <p className="mt-3 text-sm text-[#64748b]">{bio}</p> : null}
       {stats && stats.length > 0 ? (

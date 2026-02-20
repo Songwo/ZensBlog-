@@ -28,12 +28,12 @@ export default async function TagPage({ params, searchParams }: Props) {
 
   const [postTags, total] = await Promise.all([
     prisma.postTag.findMany({
-      where: { tagId: tag.id, post: { published: true } },
+      where: { tagId: tag.id, post: { published: true, status: "PUBLISHED", hiddenByReports: false, type: "OFFICIAL" } },
       include: { post: { include: { category: true, tags: { include: { tag: true } }, _count: { select: { likes: true, comments: true } } } } },
       skip: (page - 1) * PAGE_SIZE,
       take: PAGE_SIZE,
     }),
-    prisma.postTag.count({ where: { tagId: tag.id, post: { published: true } } }),
+    prisma.postTag.count({ where: { tagId: tag.id, post: { published: true, status: "PUBLISHED", hiddenByReports: false, type: "OFFICIAL" } } }),
   ]);
 
   return (

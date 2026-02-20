@@ -7,6 +7,12 @@ export interface SiteSettings {
   siteUrl: string;
   authorName: string;
   effectsLevel: "low" | "medium" | "ultra";
+  rewardQrImage: string;
+  rewardText: string;
+  adTitle: string;
+  adDescription: string;
+  adImage: string;
+  adLink: string;
 }
 
 const DEFAULT_SETTINGS: SiteSettings = {
@@ -15,6 +21,12 @@ const DEFAULT_SETTINGS: SiteSettings = {
   siteUrl: "https://zensblog.dev",
   authorName: "Zen",
   effectsLevel: "medium",
+  rewardQrImage: "",
+  rewardText: "感谢你的支持，继续输出高质量内容。",
+  adTitle: "广告位",
+  adDescription: "赞助位（300 x 250）",
+  adImage: "",
+  adLink: "",
 };
 
 const loadSiteSettings = unstable_cache(
@@ -22,7 +34,19 @@ const loadSiteSettings = unstable_cache(
     const configs = await prisma.siteConfig.findMany({
       where: {
         key: {
-          in: ["siteName", "siteDescription", "siteUrl", "authorName", "effectsLevel"],
+          in: [
+            "siteName",
+            "siteDescription",
+            "siteUrl",
+            "authorName",
+            "effectsLevel",
+            "rewardQrImage",
+            "rewardText",
+            "adTitle",
+            "adDescription",
+            "adImage",
+            "adLink",
+          ],
         },
       },
     });
@@ -39,6 +63,12 @@ const loadSiteSettings = unstable_cache(
       siteUrl: configMap.siteUrl || DEFAULT_SETTINGS.siteUrl,
       authorName: configMap.authorName || DEFAULT_SETTINGS.authorName,
       effectsLevel,
+      rewardQrImage: configMap.rewardQrImage || DEFAULT_SETTINGS.rewardQrImage,
+      rewardText: configMap.rewardText || DEFAULT_SETTINGS.rewardText,
+      adTitle: configMap.adTitle || DEFAULT_SETTINGS.adTitle,
+      adDescription: configMap.adDescription || DEFAULT_SETTINGS.adDescription,
+      adImage: configMap.adImage || DEFAULT_SETTINGS.adImage,
+      adLink: configMap.adLink || DEFAULT_SETTINGS.adLink,
     };
   },
   ["site-settings"],

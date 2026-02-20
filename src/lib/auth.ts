@@ -2,10 +2,12 @@ import NextAuth from "next-auth";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import Credentials from "next-auth/providers/credentials";
 import GitHub from "next-auth/providers/github";
+import Google from "next-auth/providers/google";
 import { compare, hash } from "bcryptjs";
 import { prisma } from "./db";
 import { syncGitHubProfileToUser } from "./github";
 import { awardBadgesForUser } from "./badges";
+import { verifyUserTwoFactorLogin } from "./user-settings";
 
 function warnMissingAuthEnv() {
   const globalForAuthEnv = globalThis as typeof globalThis & {
@@ -18,6 +20,8 @@ function warnMissingAuthEnv() {
     { keys: ["NEXTAUTH_SECRET", "AUTH_SECRET"], label: "NEXTAUTH_SECRET/AUTH_SECRET" },
     { keys: ["GITHUB_CLIENT_ID"], label: "GITHUB_CLIENT_ID" },
     { keys: ["GITHUB_CLIENT_SECRET"], label: "GITHUB_CLIENT_SECRET" },
+    { keys: ["GOOGLE_CLIENT_ID"], label: "GOOGLE_CLIENT_ID" },
+    { keys: ["GOOGLE_CLIENT_SECRET"], label: "GOOGLE_CLIENT_SECRET" },
   ] as const;
 
   const missing = checks
@@ -37,6 +41,9 @@ warnMissingAuthEnv();
 const githubClientId = process.env.GITHUB_CLIENT_ID?.trim();
 const githubClientSecret = process.env.GITHUB_CLIENT_SECRET?.trim();
 const hasGitHubOAuth = Boolean(githubClientId && githubClientSecret);
+const googleClientId = process.env.GOOGLE_CLIENT_ID?.trim();
+const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET?.trim();
+const hasGoogleOAuth = Boolean(googleClientId && googleClientSecret);
 
 const providers = [
   ...(hasGitHubOAuth
@@ -49,6 +56,7 @@ const providers = [
               scope: "read:user user:email public_repo",
             },
           },
+          allowDangerousEmailAccountLinking: true,
           profile(profile) {
             return {
               id: String(profile.id),
@@ -72,15 +80,26 @@ const providers = [
         }),
       ]
     : []),
+  ...(hasGoogleOAuth
+    ? [
+        Google({
+          clientId: googleClientId as string,
+          clientSecret: googleClientSecret as string,
+          allowDangerousEmailAccountLinking: true,
+        }),
+      ]
+    : []),
   Credentials({
     credentials: {
       username: { label: "Username", type: "text" },
       password: { label: "Password", type: "password" },
+      otp: { label: "OTP", type: "text" },
     },
     async authorize(credentials) {
       if (!credentials?.username || !credentials?.password) return null;
       const username = String(credentials.username);
       const password = String(credentials.password);
+      const otp = String(credentials.otp || "").trim();
 
       const adminUsername = (process.env.ADMIN_USERNAME || "admin").trim();
       const adminPassword = process.env.ADMIN_PASSWORD || "admin123";
@@ -121,6 +140,9 @@ const providers = [
               },
             });
 
+        const otpValid = await verifyUserTwoFactorLogin(admin.id, otp);
+        if (!otpValid) return null;
+
         return {
           id: admin.id,
           name: admin.name || admin.username,
@@ -139,6 +161,8 @@ const providers = [
         user.passwordHash
       );
       if (!valid) return null;
+      const otpValid = await verifyUserTwoFactorLogin(user.id, otp);
+      if (!otpValid) return null;
 
       return { id: user.id, name: user.name || user.username, email: user.email, role: user.role };
     },
@@ -147,6 +171,9 @@ const providers = [
 
 if (!hasGitHubOAuth) {
   console.warn("[Auth] GitHub OAuth disabled because GITHUB_CLIENT_ID or GITHUB_CLIENT_SECRET is missing.");
+}
+if (!hasGoogleOAuth) {
+  console.warn("[Auth] Google OAuth disabled because GOOGLE_CLIENT_ID or GOOGLE_CLIENT_SECRET is missing.");
 }
 
 export const { handlers, signIn, signOut, auth } = NextAuth({

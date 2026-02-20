@@ -3,8 +3,10 @@ import { prisma } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { renderMarkdown, extractTOC } from "@/lib/markdown";
 import { PostDetailExperience } from "@/components/blog/PostDetailExperience";
-import { calculateReadingTime } from "@/lib/utils";
+import { buildPostSummary, calculateReadingTime } from "@/lib/utils";
 import { getSiteSettings } from "@/lib/site-config";
+import { markdownToHtml } from "@/lib/client-markdown";
+import { recordUserReading } from "@/lib/level";
 import type { Metadata } from "next";
 
 interface Props {
@@ -30,6 +32,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     getSiteSettings(),
   ]);
   if (!post) return {};
+  const summary = buildPostSummary(post.excerpt, post.content, 180);
 
   const baseUrl = settings.siteUrl.replace(/\/+$/, "");
   const ogImage = post.coverImage
@@ -38,17 +41,17 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   return {
     title: post.title,
-    description: post.excerpt,
+    description: summary,
     openGraph: {
       title: post.title,
-      description: post.excerpt,
+      description: summary,
       type: "article",
       images: [ogImage],
     },
     twitter: {
       card: "summary_large_image",
       title: post.title,
-      description: post.excerpt,
+      description: summary,
       images: [ogImage],
     },
   };
@@ -57,9 +60,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function PostPage({ params }: Props) {
   const session = await auth();
   const { slug } = await params;
+  const settings = await getSiteSettings();
   const candidates = buildSlugCandidates(slug);
   const post = await prisma.post.findFirst({
-    where: { slug: { in: candidates }, published: true, type: "OFFICIAL" },
+    where: { slug: { in: candidates }, published: true, status: "PUBLISHED", hiddenByReports: false, type: "OFFICIAL" },
     include: {
       author: {
         select: {
@@ -75,7 +79,7 @@ export default async function PostPage({ params }: Props) {
       category: true,
       tags: { include: { tag: true } },
       comments: {
-        where: { approved: true, parentId: null },
+        where: { status: "APPROVED", hiddenByReports: false, parentId: null },
         include: {
           user: {
             select: {
@@ -88,7 +92,7 @@ export default async function PostPage({ params }: Props) {
             },
           },
           replies: {
-            where: { approved: true },
+            where: { status: "APPROVED", hiddenByReports: false },
             orderBy: { createdAt: "asc" },
             include: {
               user: {
@@ -112,7 +116,11 @@ export default async function PostPage({ params }: Props) {
   if (!post) notFound();
 
   // Increment views
-  await prisma.post.update({ where: { id: post.id }, data: { views: { increment: 1 } } });
+  const readingMinutes = calculateReadingTime(post.content);
+  await Promise.all([
+    prisma.post.update({ where: { id: post.id }, data: { views: { increment: 1 } } }),
+    session?.user?.id ? recordUserReading(session.user.id, post.id, readingMinutes) : Promise.resolve(),
+  ]);
 
   const relatedWhere =
     post.tags.length > 0
@@ -134,25 +142,26 @@ export default async function PostPage({ params }: Props) {
     renderMarkdown(post.content).catch((error) => {
       console.error("[Post Render Error]", { slug: post.slug, error });
       return (
-        <article className="prose prose-slate max-w-none">
-          <pre className="whitespace-pre-wrap break-words">{post.content}</pre>
-        </article>
+        <article
+          className="max-w-none"
+          dangerouslySetInnerHTML={{ __html: markdownToHtml(post.content) }}
+        />
       );
     }),
     prisma.siteConfig.findUnique({ where: { key: "authorName" } }),
     prisma.post.findFirst({
       where: { published: true, type: "OFFICIAL", publishedAt: { lt: post.publishedAt ?? new Date() } },
-      select: { id: true, title: true, slug: true, excerpt: true, coverImage: true },
+      select: { id: true, title: true, slug: true, excerpt: true, content: true, coverImage: true },
       orderBy: { publishedAt: "desc" },
     }),
     prisma.post.findFirst({
       where: { published: true, type: "OFFICIAL", publishedAt: { gt: post.publishedAt ?? new Date(0) } },
-      select: { id: true, title: true, slug: true, excerpt: true, coverImage: true },
+      select: { id: true, title: true, slug: true, excerpt: true, content: true, coverImage: true },
       orderBy: { publishedAt: "asc" },
     }),
     prisma.post.findMany({
       where: relatedWhere,
-      select: { id: true, title: true, slug: true, excerpt: true, coverImage: true },
+      select: { id: true, title: true, slug: true, excerpt: true, content: true, coverImage: true },
       orderBy: { publishedAt: "desc" },
       take: 6,
     }),
@@ -171,7 +180,7 @@ export default async function PostPage({ params }: Props) {
   ]);
   const relatedPosts = relatedPostsRaw.map((item) => ({
     ...item,
-    excerpt: (item.excerpt || "").replace(/\s+/g, " ").trim().slice(0, 120),
+    excerpt: buildPostSummary(item.excerpt, item.content, 120),
   }));
   const toc = extractTOC(post.content);
 
@@ -181,7 +190,7 @@ export default async function PostPage({ params }: Props) {
     "@context": "https://schema.org",
     "@type": "BlogPosting",
     headline: post.title,
-    description: post.excerpt,
+    description: buildPostSummary(post.excerpt, post.content, 180),
     datePublished: post.publishedAt?.toISOString(),
     dateModified: post.updatedAt.toISOString(),
     author: { "@type": "Person", name: displayAuthorName },
@@ -199,11 +208,11 @@ export default async function PostPage({ params }: Props) {
           id: post.id,
           slug: post.slug,
           title: post.title,
-          excerpt: post.excerpt,
+          excerpt: buildPostSummary(post.excerpt, post.content, 180),
           coverImage: post.coverImage || null,
           publishedAt: post.publishedAt?.toISOString() ?? null,
           views: post.views + 1,
-          readingTime: calculateReadingTime(post.content),
+          readingTime: readingMinutes,
           category: post.category ? { name: post.category.name, slug: post.category.slug } : null,
           tags: post.tags.map(({ tag }) => ({ id: tag.id, name: tag.name, slug: tag.slug })),
           comments: post.comments,
@@ -224,6 +233,14 @@ export default async function PostPage({ params }: Props) {
         relatedPosts={relatedPosts}
         prevPost={prevPost}
         nextPost={nextPost}
+        siteEnhancements={{
+          rewardQrImage: settings.rewardQrImage,
+          rewardText: settings.rewardText,
+          adTitle: settings.adTitle,
+          adDescription: settings.adDescription,
+          adImage: settings.adImage,
+          adLink: settings.adLink,
+        }}
       >
         {content}
       </PostDetailExperience>

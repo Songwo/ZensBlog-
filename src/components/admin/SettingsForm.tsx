@@ -69,6 +69,75 @@ export function SettingsForm({ configs }: { configs: Config[] }) {
           <option value="ultra">Ultra（高动效）</option>
         </select>
       </div>
+
+      <div className="rounded-xl border border-border bg-bg-secondary/50 p-4">
+        <p className="mb-3 text-sm font-semibold">赞赏设置</p>
+        <div className="space-y-3">
+          <div>
+            <label className="block text-sm font-medium mb-1.5">赞赏二维码图片 URL</label>
+            <input
+              type="text"
+              value={form.rewardQrImage || ""}
+              onChange={(e) => setForm({ ...form, rewardQrImage: e.target.value })}
+              placeholder="https://..."
+              className="w-full px-3 py-2.5 bg-bg-secondary border border-border rounded-lg text-sm focus:outline-none focus:border-accent"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1.5">赞赏文案</label>
+            <input
+              type="text"
+              value={form.rewardText || ""}
+              onChange={(e) => setForm({ ...form, rewardText: e.target.value })}
+              className="w-full px-3 py-2.5 bg-bg-secondary border border-border rounded-lg text-sm focus:outline-none focus:border-accent"
+            />
+          </div>
+        </div>
+      </div>
+
+      <div className="rounded-xl border border-border bg-bg-secondary/50 p-4">
+        <p className="mb-3 text-sm font-semibold">广告位设置</p>
+        <div className="space-y-3">
+          <div>
+            <label className="block text-sm font-medium mb-1.5">广告标题</label>
+            <input
+              type="text"
+              value={form.adTitle || ""}
+              onChange={(e) => setForm({ ...form, adTitle: e.target.value })}
+              className="w-full px-3 py-2.5 bg-bg-secondary border border-border rounded-lg text-sm focus:outline-none focus:border-accent"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1.5">广告描述</label>
+            <input
+              type="text"
+              value={form.adDescription || ""}
+              onChange={(e) => setForm({ ...form, adDescription: e.target.value })}
+              className="w-full px-3 py-2.5 bg-bg-secondary border border-border rounded-lg text-sm focus:outline-none focus:border-accent"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1.5">广告图片 URL</label>
+            <input
+              type="text"
+              value={form.adImage || ""}
+              onChange={(e) => setForm({ ...form, adImage: e.target.value })}
+              placeholder="https://..."
+              className="w-full px-3 py-2.5 bg-bg-secondary border border-border rounded-lg text-sm focus:outline-none focus:border-accent"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1.5">广告跳转链接</label>
+            <input
+              type="text"
+              value={form.adLink || ""}
+              onChange={(e) => setForm({ ...form, adLink: e.target.value })}
+              placeholder="https://..."
+              className="w-full px-3 py-2.5 bg-bg-secondary border border-border rounded-lg text-sm focus:outline-none focus:border-accent"
+            />
+          </div>
+        </div>
+      </div>
       <button
         type="submit"
         disabled={saving}

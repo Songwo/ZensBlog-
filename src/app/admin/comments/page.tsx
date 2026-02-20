@@ -1,13 +1,45 @@
 import { prisma } from "@/lib/db";
 import { CommentQueue } from "@/components/admin/CommentQueue";
 
-export default async function AdminCommentsPage() {
+export default async function AdminCommentsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ status?: string; q?: string; page?: string }>;
+}) {
+  const params = await searchParams;
+  const status = (params.status || "PENDING").toUpperCase();
+  const q = (params.q || "").trim();
+  const page = Math.max(1, Number(params.page || 1));
+  const pageSize = 20;
+  const skip = (page - 1) * pageSize;
+
+  const where: Record<string, unknown> = {};
+  if (["PENDING", "APPROVED", "REJECTED", "SPAM"].includes(status)) {
+    where.status = status;
+  }
+  if (q) {
+    where.OR = [
+      { content: { contains: q } },
+      { author: { contains: q } },
+      { post: { title: { contains: q } } },
+    ];
+  }
+
   const comments = await prisma.comment.findMany({
-    include: { post: { select: { title: true, slug: true } } },
-    orderBy: [{ approved: "asc" }, { createdAt: "desc" }],
+    where,
+    include: {
+      post: { select: { title: true, slug: true } },
+      _count: { select: { likes: true, reports: { where: { status: "OPEN" } } } },
+    },
+    orderBy: [{ status: "asc" }, { createdAt: "desc" }],
+    skip,
+    take: pageSize,
   });
 
-  const pending = comments.filter((c) => !c.approved).length;
+  const [pending, total] = await Promise.all([
+    prisma.comment.count({ where: { status: "PENDING" } }),
+    prisma.comment.count({ where }),
+  ]);
 
   return (
     <div>
@@ -19,7 +51,13 @@ export default async function AdminCommentsPage() {
           </span>
         )}
       </div>
-      <CommentQueue comments={comments} />
+      <CommentQueue
+        comments={comments}
+        status={status}
+        q={q}
+        page={page}
+        totalPages={Math.max(1, Math.ceil(total / pageSize))}
+      />
     </div>
   );
 }

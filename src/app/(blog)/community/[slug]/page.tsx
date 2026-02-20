@@ -5,6 +5,8 @@ import type { Metadata } from "next";
 import { AuthorCard } from "@/components/blog/AuthorCard";
 import { renderMarkdown } from "@/lib/markdown";
 import { MarkdownEnhancer } from "@/components/blog/MarkdownEnhancer";
+import { markdownToHtml } from "@/lib/client-markdown";
+import { LinkCardEnhancer } from "@/components/blog/LinkCardEnhancer";
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -25,7 +27,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const candidates = buildSlugCandidates(slug);
   const post = await prisma.post.findFirst({
-    where: { slug: { in: candidates }, published: true },
+    where: { slug: { in: candidates }, published: true, status: "PUBLISHED", hiddenByReports: false },
     select: { title: true, excerpt: true },
   });
   if (!post) return {};
@@ -36,7 +38,7 @@ export default async function CommunityDetailPage({ params }: Props) {
   const { slug } = await params;
   const candidates = buildSlugCandidates(slug);
   const post = await prisma.post.findFirst({
-    where: { slug: { in: candidates }, published: true },
+    where: { slug: { in: candidates }, published: true, status: "PUBLISHED", hiddenByReports: false },
     include: {
       author: {
         select: {
@@ -48,8 +50,8 @@ export default async function CommunityDetailPage({ params }: Props) {
         },
       },
       comments: {
-        where: { approved: true, parentId: null },
-        include: { replies: { where: { approved: true }, orderBy: { createdAt: "asc" } } },
+        where: { status: "APPROVED", hiddenByReports: false, parentId: null },
+        include: { replies: { where: { status: "APPROVED", hiddenByReports: false }, orderBy: { createdAt: "asc" } } },
         orderBy: { createdAt: "desc" },
       },
     },
@@ -58,7 +60,15 @@ export default async function CommunityDetailPage({ params }: Props) {
   if (post.type === "OFFICIAL") {
     redirect(`/blog/${post.slug}`);
   }
-  const content = await renderMarkdown(post.content);
+  const content = await renderMarkdown(post.content).catch((error) => {
+    console.error("[Community Post Render Error]", { slug: post.slug, error });
+    return (
+      <article
+        className="max-w-none"
+        dangerouslySetInnerHTML={{ __html: markdownToHtml(post.content) }}
+      />
+    );
+  });
 
   return (
     <div className="mx-auto w-full max-w-[980px] px-4 sm:px-8 py-12 fade-in-up">
@@ -79,6 +89,7 @@ export default async function CommunityDetailPage({ params }: Props) {
         {content}
       </article>
       <MarkdownEnhancer containerId="community-post-content" />
+      <LinkCardEnhancer containerId="community-post-content" />
     </div>
   );
 }

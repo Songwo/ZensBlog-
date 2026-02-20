@@ -1,4 +1,5 @@
 import { randomUUID } from "crypto";
+import { createHash } from "crypto";
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 
@@ -18,7 +19,19 @@ const SLUG_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const UPSTASH_URL = process.env.UPSTASH_REDIS_REST_URL?.replace(/\/$/, "");
 const UPSTASH_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN;
 
-export const ALLOWED_CONFIG_KEYS = ["siteName", "siteDescription", "siteUrl", "authorName", "effectsLevel"] as const;
+export const ALLOWED_CONFIG_KEYS = [
+  "siteName",
+  "siteDescription",
+  "siteUrl",
+  "authorName",
+  "effectsLevel",
+  "rewardQrImage",
+  "rewardText",
+  "adTitle",
+  "adDescription",
+  "adImage",
+  "adLink",
+] as const;
 export type AllowedConfigKey = (typeof ALLOWED_CONFIG_KEYS)[number];
 
 export function getClientIp(request: Request): string {
@@ -27,6 +40,30 @@ export function getClientIp(request: Request): string {
   const realIp = request.headers.get("x-real-ip");
   if (realIp) return realIp;
   return "unknown-ip";
+}
+
+export function sha256Hex(value: string) {
+  return createHash("sha256").update(value).digest("hex");
+}
+
+export function getUserAgent(request: Request) {
+  return request.headers.get("user-agent") || "";
+}
+
+export function getDeviceIdFromRequest(request: Request) {
+  const explicit = request.headers.get("x-device-id");
+  if (explicit && explicit.trim()) return explicit.trim().slice(0, 128);
+  const ip = getClientIp(request);
+  const ua = getUserAgent(request);
+  return `${ip}|${ua}`.slice(0, 512);
+}
+
+export function getDeviceHash(request: Request) {
+  return sha256Hex(getDeviceIdFromRequest(request));
+}
+
+export function getIpHash(request: Request) {
+  return sha256Hex(getClientIp(request));
 }
 
 function checkRateLimitLocal(request: Request, options: RateLimitOptions) {

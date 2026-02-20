@@ -22,6 +22,12 @@ function validateConfigValue(key: string, value: unknown) {
   if (key === "authorName") return normalized.length >= 1 && normalized.length <= 80;
   if (key === "siteUrl") return normalized.length <= 200 && isValidHttpUrl(normalized);
   if (key === "effectsLevel") return EFFECTS_LEVELS.has(normalized);
+  if (key === "rewardText") return normalized.length <= 120;
+  if (key === "adTitle") return normalized.length <= 80;
+  if (key === "adDescription") return normalized.length <= 200;
+  if (key === "rewardQrImage" || key === "adImage" || key === "adLink") {
+    return normalized.length === 0 || (normalized.length <= 500 && isValidHttpUrl(normalized));
+  }
   return false;
 }
 
@@ -41,6 +47,12 @@ export async function GET() {
     siteUrl: configMap.siteUrl || "https://zensblog.dev",
     authorName: configMap.authorName || "Zen",
     effectsLevel: configMap.effectsLevel || "medium",
+    rewardQrImage: configMap.rewardQrImage || "",
+    rewardText: configMap.rewardText || "感谢你的支持，继续输出高质量内容。",
+    adTitle: configMap.adTitle || "广告位",
+    adDescription: configMap.adDescription || "赞助位（300 x 250）",
+    adImage: configMap.adImage || "",
+    adLink: configMap.adLink || "",
   };
 
   cache.set(key, result, 600);

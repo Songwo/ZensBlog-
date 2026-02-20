@@ -17,6 +17,40 @@ enum PostType {
   COMMUNITY
 }
 
+enum PostStatus {
+  DRAFT
+  PENDING
+  PUBLISHED
+  REJECTED
+}
+
+enum CommentStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  SPAM
+}
+
+enum ReportTargetType {
+  POST
+  COMMENT
+}
+
+enum ReportReason {
+  SPAM
+  POLITICS
+  ABUSE
+  PORN
+  COPYRIGHT
+  OTHER
+}
+
+enum ReportStatus {
+  OPEN
+  RESOLVED
+  IGNORED
+}
+
 enum NotificationType {
   LIKE
   COMMENT_REPLY
@@ -53,6 +87,8 @@ model User {
   posts          Post[]
   comments       Comment[]
   likes          PostLike[]
+  commentLikes   CommentLike[]
+  reports        Report[]
   userBadges     UserBadge[]
   activeBadgeId  String?
   activeBadge    Badge?      @relation("ActiveUserBadge", fields: [activeBadgeId], references: [id], onDelete: SetNull)
@@ -71,7 +107,9 @@ model Post {
   excerpt     String      @default("")
   coverImage  String      @default("")
   published   Boolean     @default(false)
+  status      PostStatus  @default(PUBLISHED)
   pinned      Boolean     @default(false)
+  hiddenByReports Boolean @default(false)
   views       Int         @default(0)
   type        PostType    @default(OFFICIAL)
   authorId    String?
@@ -81,6 +119,7 @@ model Post {
   tags        PostTag[]
   comments    Comment[]
   likes       PostLike[]
+  reports     Report[]    @relation("PostReports")
   publishedAt DateTime?
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
@@ -130,6 +169,10 @@ model Comment {
   author    String
   email     String      @default("")
   approved  Boolean     @default(false)
+  status    CommentStatus @default(PENDING)
+  hiddenByReports Boolean @default(false)
+  ipHash    String      @default("")
+  deviceHash String     @default("")
   postId    String
   post      Post        @relation(fields: [postId], references: [id], onDelete: Cascade)
   parentId  String?
@@ -137,7 +180,48 @@ model Comment {
   replies   Comment[]   @relation("CommentReplies")
   userId    String?
   user      User?       @relation(fields: [userId], references: [id], onDelete: SetNull)
+  likes     CommentLike[]
+  reports   Report[]    @relation("CommentReports")
   createdAt DateTime    @default(now())
+}
+
+model CommentLike {
+  id         String   @id @default(cuid())
+  commentId  String
+  userId     String?
+  deviceHash String?
+  createdAt  DateTime @default(now())
+  comment    Comment  @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  user       User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([commentId, userId])
+  @@unique([commentId, deviceHash])
+  @@index([commentId])
+  @@index([userId])
+}
+
+model Report {
+  id         String           @id @default(cuid())
+  targetType ReportTargetType
+  targetId   String
+  postId     String?
+  commentId  String?
+  reason     ReportReason
+  detail     String           @default("")
+  status     ReportStatus     @default(OPEN)
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+  ipHash     String           @default("")
+  deviceHash String?
+  userId     String?
+  user       User?            @relation(fields: [userId], references: [id], onDelete: SetNull)
+  post       Post?            @relation("PostReports", fields: [postId], references: [id], onDelete: Cascade)
+  comment    Comment?         @relation("CommentReports", fields: [commentId], references: [id], onDelete: Cascade)
+
+  @@index([targetType, targetId])
+  @@index([status, createdAt])
+  @@unique([targetType, targetId, userId])
+  @@unique([targetType, targetId, deviceHash])
 }
 
 model Badge {

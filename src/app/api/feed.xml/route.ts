@@ -4,7 +4,7 @@ import { isValidHttpUrl } from "@/lib/api";
 export async function GET() {
   const [posts, siteConfig] = await Promise.all([
     prisma.post.findMany({
-      where: { published: true, type: "OFFICIAL" },
+      where: { published: true, status: "PUBLISHED", hiddenByReports: false, type: "OFFICIAL" },
       select: {
         title: true,
         slug: true,

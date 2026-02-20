@@ -13,18 +13,37 @@ export async function PUT(
 
   const { id } = await params;
   let approved: unknown;
+  let status: unknown;
   try {
-    approved = ((await request.json()) as { approved?: unknown }).approved;
+    const payload = await request.json() as { approved?: unknown; status?: unknown; hiddenByReports?: unknown };
+    approved = payload.approved;
+    status = payload.status;
   } catch {
     return errorJson("请求体格式错误", 400);
   }
-  if (typeof approved !== "boolean") return errorJson("approved 字段不合法", 400);
+  if (approved !== undefined && typeof approved !== "boolean") return errorJson("approved 字段不合法", 400);
+  if (status !== undefined && !["PENDING", "APPROVED", "REJECTED", "SPAM"].includes(String(status))) {
+    return errorJson("status 字段不合法", 400);
+  }
+
+  const nextStatus =
+    typeof status === "string"
+      ? status
+      : approved === true
+        ? "APPROVED"
+        : approved === false
+          ? "REJECTED"
+          : undefined;
+  if (!nextStatus) return errorJson("缺少可更新字段", 400);
 
   let comment;
   try {
     comment = await prisma.comment.update({
       where: { id },
-      data: { approved },
+      data: {
+        status: nextStatus as "PENDING" | "APPROVED" | "REJECTED" | "SPAM",
+        approved: nextStatus === "APPROVED",
+      },
     });
   } catch {
     return errorJson("评论不存在", 404);

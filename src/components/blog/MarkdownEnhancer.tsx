@@ -13,7 +13,9 @@ export function MarkdownEnhancer({
     const root = document.getElementById(containerId);
     if (!root) return;
 
-    const preBlocks = Array.from(root.querySelectorAll<HTMLElement>("pre"));
+    const preBlocks = Array.from(root.querySelectorAll<HTMLElement>("pre > code"))
+      .map((code) => code.parentElement)
+      .filter((pre): pre is HTMLElement => Boolean(pre));
     preBlocks.forEach((pre) => {
       if (pre.dataset.enhanced) return;
       pre.dataset.enhanced = "1";
@@ -37,7 +39,7 @@ export function MarkdownEnhancer({
         const textRows = Array.from(pre.querySelectorAll<HTMLElement>(".md-code-tx"));
         const text = textRows.length
           ? textRows.map((n) => n.textContent || "").join("\n")
-          : pre.textContent || "";
+          : codeNode?.textContent || pre.textContent || "";
         try {
           await navigator.clipboard.writeText(text);
           copy.textContent = "已复制";
@@ -69,4 +71,3 @@ export function MarkdownEnhancer({
 
   return null;
 }
-

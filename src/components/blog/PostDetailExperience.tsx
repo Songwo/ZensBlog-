@@ -9,6 +9,7 @@ import { GiscusComments, canUseGiscus } from "@/components/blog/GiscusComments";
 import type { TOCItem } from "@/lib/markdown";
 import { AuthorMini } from "@/components/blog/AuthorMini";
 import { AuthorCard } from "@/components/blog/AuthorCard";
+import { LinkCardEnhancer } from "@/components/blog/LinkCardEnhancer";
 
 interface DetailTag {
   id: string;
@@ -62,6 +63,15 @@ interface DetailMeta {
   viewerLiked: boolean;
 }
 
+interface SiteEnhancements {
+  rewardQrImage: string;
+  rewardText: string;
+  adTitle: string;
+  adDescription: string;
+  adImage: string;
+  adLink: string;
+}
+
 export function PostDetailExperience({
   post,
   authorName,
@@ -70,6 +80,7 @@ export function PostDetailExperience({
   relatedPosts,
   prevPost,
   nextPost,
+  siteEnhancements,
   children,
 }: {
   post: DetailMeta;
@@ -87,11 +98,12 @@ export function PostDetailExperience({
   relatedPosts: DetailPostCard[];
   prevPost: DetailPostCard | null;
   nextPost: DetailPostCard | null;
+  siteEnhancements: SiteEnhancements;
   children: React.ReactNode;
 }) {
   const [activeHeading, setActiveHeading] = useState("");
   const [showTop, setShowTop] = useState(false);
-  const [tocOpen, setTocOpen] = useState(false);
+  const [tocOpen, setTocOpen] = useState(true);
   const [lightboxImage, setLightboxImage] = useState<string | null>(null);
   const [rewardOpen, setRewardOpen] = useState(false);
   const [liked, setLiked] = useState(post.viewerLiked);
@@ -246,6 +258,7 @@ export function PostDetailExperience({
                 title={author.title || null}
                 badge={author.activeBadge || null}
                 size="md"
+                enablePreview
               />
               <div>
                 <p className="post-author-name">{authorName || "Zen"}</p>
@@ -331,12 +344,35 @@ export function PostDetailExperience({
               <button type="button" className="post-action-btn magnetic" onClick={() => setRewardOpen(true)}>
                 赞赏
               </button>
+              <button
+                type="button"
+                className="post-action-btn magnetic"
+                onClick={async () => {
+                  try {
+                    await fetch("/api/reports", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({
+                        targetType: "POST",
+                        targetId: post.id,
+                        reason: "OTHER",
+                        detail: "user:report_from_post_page",
+                      }),
+                    });
+                  } catch {
+                    // ignore
+                  }
+                }}
+              >
+                举报
+              </button>
             </div>
           </header>
 
           <div id="post-content" className="prose prose-base sm:prose-lg cyber-prose post-content-prose post-reading-wrap">
             {children}
           </div>
+          <LinkCardEnhancer containerId="post-content" />
 
           <section className="post-tag-cloud post-reading-wrap">
             {post.tags.map((tag) => (
@@ -397,11 +433,18 @@ export function PostDetailExperience({
           <div className="post-side-card post-side-toc">
             <div className="post-side-head">
               <h3>目录</h3>
-              <button type="button" onClick={() => setTocOpen((v) => !v)}>
-                {tocOpen ? "收起" : "展开"}
+              <button
+                type="button"
+                className="post-toc-toggle"
+                onClick={() => setTocOpen((v) => !v)}
+                disabled={toc.length === 0}
+                aria-expanded={tocOpen}
+                aria-controls="post-toc-list"
+              >
+                {toc.length === 0 ? "无目录" : tocOpen ? "收起" : "展开"}
               </button>
             </div>
-            <ul className={`post-toc-list ${tocOpen ? "is-open" : ""}`}>
+            <ul id="post-toc-list" className={`post-toc-list ${tocOpen ? "is-open" : ""}`}>
               {toc.map((item) => (
                 <li key={item.id}>
                   <a href={`#${item.id}`} className={activeHeading === item.id ? "is-active" : ""}>
@@ -418,7 +461,7 @@ export function PostDetailExperience({
               {relatedPosts.slice(0, 6).map((item) => (
                 <Link key={item.id} href={`/blog/${item.slug}`} className="post-related-mini-item shock-link">
                   <strong>{item.title}</strong>
-                  <span>{item.excerpt}</span>
+                  <span className="line-clamp-3">{item.excerpt}</span>
                 </Link>
               ))}
             </div>
@@ -443,8 +486,18 @@ export function PostDetailExperience({
           </div>
 
           <div className="post-side-card post-ad-placeholder">
-            <h3>广告位</h3>
-            <p>赞助位（300 x 250）</p>
+            <h3>{siteEnhancements.adTitle || "广告位"}</h3>
+            {siteEnhancements.adImage ? (
+              <a
+                href={siteEnhancements.adLink || "#"}
+                target={siteEnhancements.adLink ? "_blank" : undefined}
+                rel={siteEnhancements.adLink ? "noreferrer noopener" : undefined}
+                className="mt-2 block overflow-hidden rounded-md border border-[#e2e8f0]"
+              >
+                <img src={siteEnhancements.adImage} alt={siteEnhancements.adTitle || "广告"} className="h-auto w-full object-cover" loading="lazy" />
+              </a>
+            ) : null}
+            <p className="mt-2">{siteEnhancements.adDescription || "赞助位（300 x 250）"}</p>
           </div>
         </aside>
       </div>
@@ -463,8 +516,17 @@ export function PostDetailExperience({
         <div className="post-modal-mask" onClick={() => setRewardOpen(false)}>
           <div className="post-modal-card" onClick={(e) => e.stopPropagation()}>
             <h3>赞赏支持</h3>
-            <p>感谢你的支持，继续输出高质量内容。</p>
-            <div className="post-qrcode-placeholder">二维码占位</div>
+            <p>{siteEnhancements.rewardText || "感谢你的支持，继续输出高质量内容。"}</p>
+            {siteEnhancements.rewardQrImage ? (
+              <img
+                src={siteEnhancements.rewardQrImage}
+                alt="赞赏二维码"
+                className="mx-auto mt-3 h-56 w-56 rounded-lg border border-[#e2e8f0] object-cover"
+                loading="lazy"
+              />
+            ) : (
+              <div className="post-qrcode-placeholder">请在后台设置赞赏二维码</div>
+            )}
             <button type="button" className="post-action-btn mt-3 w-full" onClick={() => setRewardOpen(false)}>
               关闭
             </button>

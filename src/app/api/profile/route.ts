@@ -2,6 +2,7 @@ import { prisma } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { checkRateLimit, errorJson, isSameOrigin, normalizeString, safeJson } from "@/lib/api";
 import { awardBadgesForUser } from "@/lib/badges";
+import { getUserNotifySettings, getUserTwoFactorSettings, updateUserNotifySettings } from "@/lib/user-settings";
 
 function paginationFromUrl(url: string) {
   const { searchParams } = new URL(url);
@@ -45,10 +46,12 @@ export async function GET(request: Request) {
   });
   if (!user) return errorJson("用户不存在", 404);
 
-  const [postCount, commentCount, receivedLikes] = await Promise.all([
+  const [postCount, commentCount, receivedLikes, notifySettings, twoFactor] = await Promise.all([
     prisma.post.count({ where: { authorId: user.id } }),
     prisma.comment.count({ where: { userId: user.id } }),
     prisma.postLike.count({ where: { post: { authorId: user.id } } }),
+    getUserNotifySettings(user.id),
+    getUserTwoFactorSettings(user.id),
   ]);
 
   if (tab === "comments") {
@@ -70,6 +73,8 @@ export async function GET(request: Request) {
 
     return safeJson({
       profile: user,
+      notifySettings,
+      security: { twoFactorEnabled: twoFactor.enabled },
       stats: { postCount, commentCount, receivedLikes },
       badges: user.userBadges.map((item) => item.badge),
       history: {
@@ -110,6 +115,8 @@ export async function GET(request: Request) {
 
     return safeJson({
       profile: user,
+      notifySettings,
+      security: { twoFactorEnabled: twoFactor.enabled },
       stats: { postCount, commentCount, receivedLikes },
       badges: user.userBadges.map((item) => item.badge),
       history: {
@@ -167,6 +174,8 @@ export async function GET(request: Request) {
 
   return safeJson({
     profile: user,
+    notifySettings,
+    security: { twoFactorEnabled: twoFactor.enabled },
     stats: { postCount, commentCount, receivedLikes },
     badges: user.userBadges.map((item) => item.badge),
     history: {
@@ -203,6 +212,11 @@ export async function PUT(request: Request) {
     const website = normalizeString(payload.website, 500);
     const twitter = normalizeString(payload.twitter, 120);
     const linkedin = normalizeString(payload.linkedin, 200);
+    const feishuWebhook = normalizeString(payload.feishuWebhook, 500);
+    const wecomWebhook = normalizeString(payload.wecomWebhook, 500);
+    const notifyEmailTo = normalizeString(payload.notifyEmailTo, 160).toLowerCase();
+    const notifyEmailEnabled =
+      typeof payload.notifyEmailEnabled === "boolean" ? payload.notifyEmailEnabled : undefined;
     const hasActiveBadgeField = Object.prototype.hasOwnProperty.call(payload, "activeBadgeId");
     const activeBadgeIdRaw = payload.activeBadgeId;
     const activeBadgeId = typeof activeBadgeIdRaw === "string" ? normalizeString(activeBadgeIdRaw, 64) : "";
@@ -248,8 +262,19 @@ export async function PUT(request: Request) {
       data: updateData,
     });
 
+    await updateUserNotifySettings(session.user.id, {
+      feishuWebhook,
+      wecomWebhook,
+      emailTo: notifyEmailTo,
+      emailEnabled: notifyEmailEnabled,
+    });
+
     return safeJson({ success: true, user: updated });
   } catch {
     return errorJson("保存失败", 500);
   }
+}
+
+export async function PATCH(request: Request) {
+  return PUT(request);
 }

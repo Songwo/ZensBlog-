@@ -1,382 +1,186 @@
-# ZensBlog
+# ZensBlog 2.0
 
-A modern, full-stack blog system built with Next.js 15, TypeScript, and PostgreSQL.
+一个面向个人创作者与开发者的全栈博客系统（Next.js + Prisma）。
 
-## Features
+## 1. 项目定位
 
-### Core Functionality
-- 📝 **Post Management** - Create, edit, and publish blog posts with markdown support
-- 🏷️ **Categories & Tags** - Organize content with categories and tags
-- 💬 **Comments System** - Nested comments with approval workflow
-- 🔍 **Advanced Search** - PostgreSQL full-text search with similarity ranking
-- 📊 **Projects Showcase** - Display your portfolio projects
-- 👤 **About Page** - Dynamic about page management
-- 🔐 **Authentication** - Secure admin authentication with NextAuth.js
+ZensBlog 2.0 提供：
+- 文章发布、评论、审核、举报
+- 个人资料与设置中心（头像、2FA、通知、集成）
+- 社区帖子、标签分类、推荐与链接卡片
+- 管理后台（文章/评论/资料/广告/赞赏配置）
 
-### Performance & Optimization
-- ⚡ **Memory Caching** - Intelligent caching with automatic invalidation
-- 🚀 **Optimized Queries** - Strategic database indexes for fast queries
-- 📈 **Rate Limiting** - Built-in rate limiting for API protection
-- 🎯 **Response Times** - < 100ms for most endpoints
+适合：
+- 想快速搭建个人博客的小白
+- 希望继续二次开发的前端/全栈开发者
 
-### Developer Experience
-- 🛠️ **TypeScript** - Full type safety across the stack
-- 🎨 **Tailwind CSS** - Utility-first styling
-- 📦 **Prisma ORM** - Type-safe database access
-- 🐳 **Docker Support** - Easy deployment with Docker Compose
-- 📚 **Comprehensive Docs** - Detailed API and migration documentation
-
-## Tech Stack
-
-- **Framework**: Next.js 15 (App Router)
-- **Language**: TypeScript
-- **Database**: PostgreSQL (with SQLite support)
-- **ORM**: Prisma
-- **Authentication**: NextAuth.js v5
-- **Styling**: Tailwind CSS
-- **Markdown**: next-mdx-remote with syntax highlighting (Shiki)
-- **Deployment**: Docker, Vercel, Railway
-
-## Quick Start
-
-### Prerequisites
+## 2. 环境要求
 
 - Node.js 18+
-- Docker (for PostgreSQL)
-- npm or yarn
+- npm 9+
+- Windows / macOS / Linux
+- 数据库：默认 SQLite（开箱即用）
 
-### Installation
+## 3. 小白快速启动（5 分钟）
 
+1. 安装依赖
 ```bash
-# Clone the repository
-git clone <your-repo-url>
-cd ZensBlog
-
-# Install dependencies
 npm install
+```
 
-# Setup environment variables
+2. 配置环境变量
+```bash
 cp .env.example .env
-# Edit .env and configure your settings
-
-# Start PostgreSQL (using Docker)
-docker-compose up -d postgres
-
-# Setup database
-npm run db:push
-docker exec -i zensblog-postgres psql -U postgres -d zensblog < prisma/migrations/add_fulltext_search.sql
-
-# Seed database (optional)
-npm run db:seed
-
-# Start development server
-npm run dev
 ```
-
-Visit `http://localhost:3000` to see your blog!
-
-### Using SQLite (Development)
-
-If you prefer SQLite for development:
-
-```bash
-# Update .env
-DATABASE_URL="file:./prisma/dev.db"
-
-# Update prisma/schema.prisma
-# Change: provider = "postgresql"
-# To: provider = "sqlite"
-
-# Push schema
-npm run db:push
-
-# Seed database
-npm run db:seed
-
-# Start dev server
-npm run dev
-```
-
-## Migration from SQLite to PostgreSQL
-
-If you're migrating from SQLite to PostgreSQL, see our comprehensive guides:
-
-- **[QUICKSTART.md](./QUICKSTART.md)** - 5-step quick migration guide
-- **[MIGRATION_GUIDE.md](./MIGRATION_GUIDE.md)** - Detailed migration instructions
-- **[README_MIGRATION.md](./README_MIGRATION.md)** - Implementation overview
-
-Quick migration:
-```bash
-# 1. Backup
-cp prisma/dev.db prisma/dev.db.backup
-
-# 2. Start PostgreSQL
-docker-compose up -d postgres
-
-# 3. Update .env
-DATABASE_URL="postgresql://postgres:password@localhost:5432/zensblog"
-
-# 4. Setup
-npm run db:push
-docker exec -i zensblog-postgres psql -U postgres -d zensblog < prisma/migrations/add_fulltext_search.sql
-
-# 5. Migrate data
-npm run db:migrate
-```
-
-## API Documentation
-
-Complete API documentation is available in [API_DOCUMENTATION.md](./API_DOCUMENTATION.md).
-
-### Key Endpoints
-
-#### Posts
-- `GET /api/posts` - List posts (with pagination)
-- `POST /api/posts` - Create post (admin)
-- `GET /api/posts/:id` - Get single post
-- `PUT /api/posts/:id` - Update post (admin)
-- `DELETE /api/posts/:id` - Delete post (admin)
-
-#### Projects
-- `GET /api/projects` - List projects
-- `POST /api/projects` - Create project (admin)
-- `GET /api/projects/:id` - Get single project
-- `PUT /api/projects/:id` - Update project (admin)
-- `DELETE /api/projects/:id` - Delete project (admin)
-
-#### Search
-- `GET /api/search?q=query` - Search posts with full-text search
-
-#### About
-- `GET /api/about` - Get about page content
-- `PUT /api/about` - Update about page (admin)
-
-#### Categories & Tags
-- `GET /api/categories` - List categories
-- `POST /api/categories` - Create category (admin)
-- `GET /api/tags` - List tags
-- `POST /api/tags` - Create tag (admin)
-
-#### Settings
-- `GET /api/settings` - Get site configuration
-- `PUT /api/settings` - Update site configuration (admin)
-
-## Project Structure
-
-```
-ZensBlog/
-├── prisma/
-│   ├── schema.prisma          # Database schema
-│   ├── migrations/            # SQL migrations
-│   └── seed.ts               # Database seeding
-├── scripts/
-│   └── migrate-to-postgres.ts # Migration script
-├── src/
-│   ├── app/
-│   │   ├── api/              # API routes
-│   │   ├── (pages)/          # Page routes
-│   │   └── layout.tsx        # Root layout
-│   ├── components/           # React components
-│   ├── lib/
-│   │   ├── db.ts            # Prisma client
-│   │   ├── cache.ts         # Caching utility
-│   │   ├── search.ts        # Search functionality
-│   │   ├── api.ts           # API utilities
-│   │   └── auth.ts          # Authentication
-│   └── styles/              # Global styles
-├── public/                   # Static assets
-├── docker-compose.yml        # Docker configuration
-└── package.json             # Dependencies
-```
-
-## Development
-
-### Available Scripts
-
-```bash
-# Development
-npm run dev              # Start dev server
-npm run build           # Build for production
-npm run start           # Start production server
-npm run lint            # Run ESLint
-
-# Database
-npm run db:push         # Push schema to database
-npm run db:seed         # Seed database with sample data
-npm run db:studio       # Open Prisma Studio
-npm run db:migrate      # Migrate data from SQLite to PostgreSQL
-npm run db:setup        # Setup PostgreSQL with extensions
-```
-
-### Environment Variables
-
+至少确认这些变量：
 ```env
-# Database
-DATABASE_URL="postgresql://postgres:password@localhost:5432/zensblog"
-
-# Authentication
-AUTH_SECRET="your-secret-key"
-
-# Optional: Rate Limiting (Redis)
-UPSTASH_REDIS_REST_URL=""
-UPSTASH_REDIS_REST_TOKEN=""
-
-# Optional: Cloud Storage (Cloudinary)
-CLOUDINARY_CLOUD_NAME=""
-CLOUDINARY_API_KEY=""
-CLOUDINARY_API_SECRET=""
-CLOUDINARY_FOLDER="zensblog"
+DATABASE_URL="file:./prisma/dev.db"
+AUTH_SECRET="your-random-secret"
+NEXTAUTH_URL="http://localhost:3000"
 ```
 
-## Deployment
+3. 初始化数据库
+```bash
+npm run db:push
+npm run db:seed
+```
 
-### Using Docker
+4. 启动开发环境
+```bash
+npm run dev
+```
+
+5. 打开浏览器
+- 前台：http://localhost:3000
+- 管理后台：http://localhost:3000/admin
+
+## 4. 默认管理员说明
+
+请以你当前 `.env` 和 `prisma/seed.ts` 实际配置为准。若登录失败：
+
+1. 重新执行 `npm run db:seed`
+2. 检查 `.env` 里的管理员用户名/密码配置
+3. 确认数据库路径和 `DATABASE_URL` 一致
+
+## 5. 配置教程（小白向）
+
+### 5.1 站点基础信息
+路径：`后台 -> 站点设置`
+
+可配置：
+- 站点名称
+- 站点描述
+- 站点 URL
+- 作者名称
+- 动效强度
+
+### 5.2 赞赏二维码配置（2.0）
+路径：`后台 -> 站点设置 -> 赞赏设置`
+
+填写：
+- 赞赏二维码图片 URL（http/https）
+- 赞赏文案
+
+效果：文章详情页的“赞赏弹窗”会直接展示二维码。
+
+### 5.3 广告位配置（2.0）
+路径：`后台 -> 站点设置 -> 广告位设置`
+
+填写：
+- 广告标题
+- 广告描述
+- 广告图片 URL
+- 广告跳转链接
+
+效果：文章详情页侧栏广告位自动更新。
+
+### 5.4 用户资料与安全
+路径：`前台 -> 设置中心`
+
+可配置：
+- 头像上传（自动裁剪）
+- 昵称、简介、社交链接
+- 2FA（Google Authenticator）
+- 通知渠道（站内、邮箱、Webhook）
+- 快速预览卡片样式和展示字段
+
+## 6. 使用攻略（2.0）
+
+### 6.1 内容发布流程建议
+1. 先发草稿
+2. 预览 Markdown
+3. 设置摘要与封面
+4. 发布后观察评论与通知
+
+### 6.2 评论治理建议
+- 开启评论审核
+- 管理端每天清理 `SPAM/REJECTED`
+- 对高频举报内容优先处理
+
+### 6.3 提升互动
+- 在资料页设置徽章与简介
+- 开启链接卡片（GitHub/普通链接）
+- 使用赞赏二维码和广告位获取持续支持
+
+### 6.4 全站头像快速预览
+2.0 已支持多个入口点击头像/作者名弹出预览卡片（评论区、文章作者区、社区列表等），可在设置中心自定义卡片展示内容。
+
+## 7. 常用命令
 
 ```bash
-# Build and start all services
+npm run dev          # 开发环境
+npm run build        # 生产构建
+npm run start        # 启动生产服务
+npm run lint         # 代码检查
+npm run db:push      # 同步 Prisma schema
+npm run db:seed      # 填充初始数据
+npm run db:studio    # 打开 Prisma Studio
+```
+
+## 8. 性能优化（2.0 已落地）
+
+已完成：
+- 导航体感优化：减少 Header 过度预取请求
+- 用户头像资料请求增加短期内存缓存，减少重复加载
+- 图片优化格式启用 `AVIF/WebP`
+- 文章/评论等关键交互保留骨架屏与增量通知优化
+
+建议上线配置：
+- 使用 `npm run build && npm run start` 验证生产性能
+- 反向代理开启 gzip/br 压缩
+- 图片尽量使用 CDN + WebP
+
+## 9. 部署简版
+
+### Docker
+```bash
 docker-compose up -d
-
-# View logs
-docker-compose logs -f app
-
-# Stop services
-docker-compose down
 ```
 
-### Using Vercel
-
-1. Create PostgreSQL database in Vercel dashboard
-2. Set environment variables
-3. Deploy:
-   ```bash
-   vercel --prod
-   ```
-
-### Using Railway
-
-1. Create new project from GitHub
-2. Add PostgreSQL service
-3. Set `DATABASE_URL` environment variable
-4. Deploy automatically on push
-
-## Performance
-
-### Caching Strategy
-
-- **Posts list**: 60 seconds TTL
-- **Categories**: 300 seconds TTL
-- **Tags**: 300 seconds TTL
-- **Settings**: 600 seconds TTL
-- **Projects**: 120 seconds TTL
-- **About page**: 600 seconds TTL
-
-Cache automatically invalidates on data mutations.
-
-### Database Optimization
-
-- Strategic indexes on frequently queried fields
-- PostgreSQL `pg_trgm` extension for similarity search
-- Connection pooling support
-- Optimized query patterns
-
-### Expected Performance
-
-- Posts list (cached): < 10ms
-- Posts list (uncached): < 50ms
-- Search: < 80ms
-- Create/Update: < 100ms
-
-## Security
-
-- ✅ Rate limiting on all endpoints
-- ✅ CSRF protection (same-origin checks)
-- ✅ Input validation and sanitization
-- ✅ SQL injection prevention (Prisma)
-- ✅ XSS protection
-- ✅ Secure authentication (NextAuth.js)
-- ✅ Security headers on all responses
-
-## Testing
-
+### Node 直接部署
 ```bash
-# Test API endpoints
-curl http://localhost:3000/api/posts
-curl http://localhost:3000/api/projects
-curl http://localhost:3000/api/search?q=test
-
-# Test with authentication (admin)
-# Login first, then use session cookies
+npm install
+npm run build
+npm run start
 ```
 
-## Contributing
+## 10. 常见问题
 
-Contributions are welcome! Please follow these guidelines:
+### Q1: 登录后又跳回登录页
+- 检查 `NEXTAUTH_URL`
+- 检查浏览器是否禁用 Cookie
+- 检查服务端时间是否正确
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Write/update tests if applicable
-5. Submit a pull request
+### Q2: Prisma 报 datasource URL 错误
+- 若使用 SQLite：`DATABASE_URL="file:./prisma/dev.db"`
+- 若使用 Postgres：`DATABASE_URL="postgresql://..."`
+- 确保和 `prisma/schema.prisma` provider 匹配
 
-## Documentation
+### Q3: 页面跳转慢
+- 先用生产模式测试：`npm run build && npm run start`
+- 清理浏览器插件干扰
+- 检查是否存在慢 API（Network 面板）
 
-- **[QUICKSTART.md](./QUICKSTART.md)** - Quick start guide
-- **[MIGRATION_GUIDE.md](./MIGRATION_GUIDE.md)** - Database migration guide
-- **[API_DOCUMENTATION.md](./API_DOCUMENTATION.md)** - Complete API reference
-- **[IMPLEMENTATION_SUMMARY.md](./IMPLEMENTATION_SUMMARY.md)** - Technical details
+## 11. License
 
-## Troubleshooting
-
-### Database Connection Issues
-
-```bash
-# Check PostgreSQL is running
-docker ps | grep postgres
-
-# Test connection
-psql $DATABASE_URL -c "SELECT version();"
-
-# View logs
-docker-compose logs postgres
-```
-
-### Migration Issues
-
-```bash
-# Reset database (development only!)
-npm run db:push -- --force-reset
-
-# Re-run migration
-npm run db:migrate
-```
-
-### Cache Issues
-
-Cache is stored in memory and clears on application restart. For production with multiple instances, consider using Redis.
-
-## License
-
-MIT License - feel free to use this project for your own blog!
-
-## Support
-
-For issues and questions:
-- Check the documentation files
-- Review [API_DOCUMENTATION.md](./API_DOCUMENTATION.md)
-- Check Docker logs: `docker-compose logs`
-- Open an issue on GitHub
-
-## Roadmap
-
-- [ ] Redis integration for distributed caching
-- [ ] Image optimization and CDN integration
-- [ ] Real-time features with WebSockets
-- [ ] GraphQL API layer
-- [ ] Analytics dashboard
-- [ ] Multi-language support
-- [ ] RSS feed improvements
-- [ ] Email notifications
-
----
-
-Built with ❤️ using Next.js, TypeScript, and PostgreSQL
+MIT

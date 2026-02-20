@@ -16,6 +16,9 @@ export async function POST(request: Request) {
   const rate = await checkRateLimit(request, { namespace: "api-profile-post-create", limit: 20, windowMs: 60_000 });
   if (!rate.allowed) return errorJson("请求过于频繁，请稍后再试", 429);
 
+  const role = (session.user as { role?: string }).role || "USER";
+  const isAdmin = role.toUpperCase() === "ADMIN" || role === "admin";
+
   try {
     const data: unknown = await request.json();
     if (!data || typeof data !== "object" || Array.isArray(data)) return errorJson("请求体格式错误", 400);
@@ -26,7 +29,11 @@ export async function POST(request: Request) {
     const coverImage = normalizeString(payload.coverImage, 500);
     const categoryId = typeof payload.categoryId === "string" && payload.categoryId.trim() ? payload.categoryId.trim() : null;
     const tagIds = parseTagIds(payload.tagIds);
-    const published = payload.published === undefined ? true : Boolean(payload.published);
+    const requestedPublished = payload.published === undefined ? false : Boolean(payload.published);
+    const published = isAdmin ? requestedPublished : false;
+    const status = isAdmin
+      ? (published ? "PUBLISHED" : "DRAFT")
+      : "PENDING";
     if (!title || !content) return errorJson("标题与内容不能为空", 400);
     if (coverImage && !coverImage.startsWith("/uploads/") && !isValidHttpUrl(coverImage)) {
       return errorJson("封面图地址不合法", 400);
@@ -53,6 +60,7 @@ export async function POST(request: Request) {
           type: "OFFICIAL",
           authorId: session.user.id,
           published,
+          status,
           publishedAt: published ? new Date() : null,
         },
         select: { id: true, slug: true },

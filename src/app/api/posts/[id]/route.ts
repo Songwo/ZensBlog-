@@ -32,11 +32,11 @@ export async function GET(
         include: { category: true, tags: { include: { tag: true } }, comments: true },
       })
     : await prisma.post.findFirst({
-        where: { id, published: true, type: "OFFICIAL" },
+        where: { id, published: true, status: "PUBLISHED", hiddenByReports: false, type: "OFFICIAL" },
         include: {
           category: true,
           tags: { include: { tag: true } },
-          comments: { where: { approved: true }, orderBy: { createdAt: "desc" } },
+          comments: { where: { status: "APPROVED", hiddenByReports: false }, orderBy: { createdAt: "desc" } },
         },
       });
 
@@ -98,6 +98,7 @@ export async function PUT(
           ...(coverImage !== undefined && { coverImage }),
           ...(published !== undefined && {
             published,
+            status: published ? "PUBLISHED" : "DRAFT",
             publishedAt: published && !existing.publishedAt ? new Date() : existing.publishedAt,
           }),
           ...(pinned !== undefined && { pinned }),

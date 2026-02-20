@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import { getLabItems } from "@/lib/content-pages";
 import { LabInteractiveDemos } from "@/components/blog/LabInteractiveDemos";
 import { LabSuggestionBox } from "@/components/blog/LabSuggestionBox";
+import { prisma } from "@/lib/db";
 
 export const metadata: Metadata = {
   title: "LAB",
@@ -18,6 +19,14 @@ function getStatusClass(status: string) {
 
 export default async function LabPage() {
   const demos = await getLabItems();
+  const slugs = demos.map((d) => d.articleSlug).filter((v): v is string => Boolean(v));
+  const articleRows = slugs.length
+    ? await prisma.post.findMany({
+        where: { slug: { in: slugs }, published: true, status: "PUBLISHED", hiddenByReports: false, type: "OFFICIAL" },
+        select: { slug: true },
+      })
+    : [];
+  const articleSlugSet = new Set(articleRows.map((r) => r.slug));
 
   return (
     <div className="mx-auto w-full max-w-[1280px] px-4 sm:px-8 lg:px-12 py-12 fade-in-up">
@@ -32,12 +41,18 @@ export default async function LabPage() {
             <p className="mt-2 text-sm text-[#64748b]">{demo.desc}</p>
             <div className="mt-4 flex flex-wrap gap-2">
               {demo.articleSlug && (
-                <Link
-                  href={`/blog/${demo.articleSlug}`}
-                  className="inline-flex items-center rounded-md border border-[#e2e8f0] px-2.5 py-1 text-xs text-[#334155] hover:border-[#f2a3c4] hover:text-[#c73b78] transition-colors"
-                >
-                  阅读背后原理
-                </Link>
+                articleSlugSet.has(demo.articleSlug) ? (
+                  <Link
+                    href={`/blog/${demo.articleSlug}`}
+                    className="inline-flex items-center rounded-md border border-[#e2e8f0] px-2.5 py-1 text-xs text-[#334155] hover:border-[#f2a3c4] hover:text-[#c73b78] transition-colors"
+                  >
+                    阅读背后原理
+                  </Link>
+                ) : (
+                  <span className="inline-flex items-center rounded-md border border-slate-200 bg-slate-100 px-2.5 py-1 text-xs text-slate-500">
+                    原理文章待发布
+                  </span>
+                )
               )}
               {demo.sourceUrl && (
                 <a
