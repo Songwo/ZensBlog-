@@ -38,6 +38,12 @@ function warnMissingAuthEnv() {
 
 warnMissingAuthEnv();
 
+function getAppBaseUrl() {
+  const raw = (process.env.AUTH_URL || process.env.NEXTAUTH_URL || "").trim();
+  if (!raw) return "";
+  return raw.replace(/\/+$/, "");
+}
+
 const githubClientId = (process.env.GITHUB_CLIENT_ID || process.env.AUTH_GITHUB_ID || "").trim();
 const githubClientSecret = (process.env.GITHUB_CLIENT_SECRET || process.env.AUTH_GITHUB_SECRET || "").trim();
 const hasGitHubOAuth = Boolean(githubClientId && githubClientSecret);
@@ -178,6 +184,7 @@ if (!hasGoogleOAuth) {
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   adapter: PrismaAdapter(prisma),
+  trustHost: true,
   providers,
   session: { strategy: "jwt" },
   callbacks: {
@@ -277,6 +284,25 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           }));
       }
       return session;
+    },
+    redirect({ url, baseUrl }) {
+      const appBaseUrl = getAppBaseUrl() || baseUrl;
+      const safeBase = appBaseUrl.replace(/\/+$/, "");
+
+      // Relative redirect
+      if (url.startsWith("/")) return `${safeBase}${url}`;
+
+      try {
+        const target = new URL(url);
+        const base = new URL(safeBase);
+        const badHosts = new Set(["0.0.0.0", "127.0.0.1", "localhost"]);
+        if (badHosts.has(target.hostname)) return safeBase;
+        if (target.origin === base.origin) return target.toString();
+      } catch {
+        return safeBase;
+      }
+
+      return safeBase;
     },
   },
   pages: {
