@@ -4,6 +4,8 @@ import { GlobalHotkeys } from "@/components/blog/GlobalHotkeys";
 import { SpotlightSearch } from "@/components/blog/SpotlightSearch";
 import { getSiteSettings } from "@/lib/site-config";
 
+export const dynamic = "force-dynamic";
+
 export default async function BlogLayout({ children }: { children: React.ReactNode }) {
   const settings = await getSiteSettings();
 
