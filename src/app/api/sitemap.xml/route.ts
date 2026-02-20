@@ -1,27 +1,30 @@
 import { prisma } from "@/lib/db";
 import { isValidHttpUrl } from "@/lib/api";
 
+export const dynamic = "force-dynamic";
+
 export async function GET() {
-  const posts = await prisma.post.findMany({
-    where: { published: true, status: "PUBLISHED", hiddenByReports: false, type: "OFFICIAL" },
-    select: { slug: true, updatedAt: true },
-    orderBy: { updatedAt: "desc" },
-  });
-  const communityPosts = await prisma.post.findMany({
-    where: { published: true, status: "PUBLISHED", hiddenByReports: false, type: "COMMUNITY" },
-    select: { slug: true, updatedAt: true },
-    orderBy: { updatedAt: "desc" },
-  });
+  try {
+    const posts = await prisma.post.findMany({
+      where: { published: true, status: "PUBLISHED", hiddenByReports: false, type: "OFFICIAL" },
+      select: { slug: true, updatedAt: true },
+      orderBy: { updatedAt: "desc" },
+    });
+    const communityPosts = await prisma.post.findMany({
+      where: { published: true, status: "PUBLISHED", hiddenByReports: false, type: "COMMUNITY" },
+      select: { slug: true, updatedAt: true },
+      orderBy: { updatedAt: "desc" },
+    });
 
-  const categories = await prisma.category.findMany({
-    select: { slug: true },
-  });
+    const categories = await prisma.category.findMany({
+      select: { slug: true },
+    });
 
-  const siteConfig = await prisma.siteConfig.findFirst({ where: { key: "siteUrl" } });
-  const configuredSiteUrl = siteConfig?.value || "";
-  const siteUrl = isValidHttpUrl(configuredSiteUrl) ? configuredSiteUrl : "https://zensblog.dev";
+    const siteConfig = await prisma.siteConfig.findFirst({ where: { key: "siteUrl" } });
+    const configuredSiteUrl = siteConfig?.value || "";
+    const siteUrl = isValidHttpUrl(configuredSiteUrl) ? configuredSiteUrl : "https://zensblog.dev";
 
-  const xml = `<?xml version="1.0" encoding="UTF-8"?>
+    const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
     <loc>${siteUrl}</loc>
@@ -82,7 +85,21 @@ export async function GET() {
     .join("")}
 </urlset>`;
 
-  return new Response(xml, {
-    headers: { "Content-Type": "application/xml; charset=utf-8" },
-  });
+    return new Response(xml, {
+      headers: { "Content-Type": "application/xml; charset=utf-8" },
+    });
+  } catch {
+    const fallbackSiteUrl = "https://zensblog.dev";
+    const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>${fallbackSiteUrl}</loc>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+  </url>
+</urlset>`;
+    return new Response(xml, {
+      headers: { "Content-Type": "application/xml; charset=utf-8" },
+    });
+  }
 }

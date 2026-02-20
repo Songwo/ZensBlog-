@@ -18,10 +18,10 @@ function warnMissingAuthEnv() {
   const checks = [
     { keys: ["NEXTAUTH_URL", "AUTH_URL"], label: "NEXTAUTH_URL/AUTH_URL" },
     { keys: ["NEXTAUTH_SECRET", "AUTH_SECRET"], label: "NEXTAUTH_SECRET/AUTH_SECRET" },
-    { keys: ["GITHUB_CLIENT_ID"], label: "GITHUB_CLIENT_ID" },
-    { keys: ["GITHUB_CLIENT_SECRET"], label: "GITHUB_CLIENT_SECRET" },
-    { keys: ["GOOGLE_CLIENT_ID"], label: "GOOGLE_CLIENT_ID" },
-    { keys: ["GOOGLE_CLIENT_SECRET"], label: "GOOGLE_CLIENT_SECRET" },
+    { keys: ["GITHUB_CLIENT_ID", "AUTH_GITHUB_ID"], label: "GITHUB_CLIENT_ID/AUTH_GITHUB_ID" },
+    { keys: ["GITHUB_CLIENT_SECRET", "AUTH_GITHUB_SECRET"], label: "GITHUB_CLIENT_SECRET/AUTH_GITHUB_SECRET" },
+    { keys: ["GOOGLE_CLIENT_ID", "AUTH_GOOGLE_ID"], label: "GOOGLE_CLIENT_ID/AUTH_GOOGLE_ID" },
+    { keys: ["GOOGLE_CLIENT_SECRET", "AUTH_GOOGLE_SECRET"], label: "GOOGLE_CLIENT_SECRET/AUTH_GOOGLE_SECRET" },
   ] as const;
 
   const missing = checks
@@ -38,11 +38,11 @@ function warnMissingAuthEnv() {
 
 warnMissingAuthEnv();
 
-const githubClientId = process.env.GITHUB_CLIENT_ID?.trim();
-const githubClientSecret = process.env.GITHUB_CLIENT_SECRET?.trim();
+const githubClientId = (process.env.GITHUB_CLIENT_ID || process.env.AUTH_GITHUB_ID || "").trim();
+const githubClientSecret = (process.env.GITHUB_CLIENT_SECRET || process.env.AUTH_GITHUB_SECRET || "").trim();
 const hasGitHubOAuth = Boolean(githubClientId && githubClientSecret);
-const googleClientId = process.env.GOOGLE_CLIENT_ID?.trim();
-const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET?.trim();
+const googleClientId = (process.env.GOOGLE_CLIENT_ID || process.env.AUTH_GOOGLE_ID || "").trim();
+const googleClientSecret = (process.env.GOOGLE_CLIENT_SECRET || process.env.AUTH_GOOGLE_SECRET || "").trim();
 const hasGoogleOAuth = Boolean(googleClientId && googleClientSecret);
 
 const providers = [
@@ -170,10 +170,10 @@ const providers = [
 ];
 
 if (!hasGitHubOAuth) {
-  console.warn("[Auth] GitHub OAuth disabled because GITHUB_CLIENT_ID or GITHUB_CLIENT_SECRET is missing.");
+  console.warn("[Auth] GitHub OAuth disabled because GITHUB_CLIENT_ID/AUTH_GITHUB_ID or GITHUB_CLIENT_SECRET/AUTH_GITHUB_SECRET is missing.");
 }
 if (!hasGoogleOAuth) {
-  console.warn("[Auth] Google OAuth disabled because GOOGLE_CLIENT_ID or GOOGLE_CLIENT_SECRET is missing.");
+  console.warn("[Auth] Google OAuth disabled because GOOGLE_CLIENT_ID/AUTH_GOOGLE_ID or GOOGLE_CLIENT_SECRET/AUTH_GOOGLE_SECRET is missing.");
 }
 
 export const { handlers, signIn, signOut, auth } = NextAuth({

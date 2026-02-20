@@ -8,6 +8,8 @@ RUN npm ci
 
 FROM base AS builder
 WORKDIR /app
+ARG BUILD_DATABASE_URL="file:./prisma/build.db"
+ENV DATABASE_URL=${BUILD_DATABASE_URL}
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN npx prisma generate
@@ -33,5 +35,6 @@ USER nextjs
 EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
+ENV DATABASE_URL="file:./prisma/prod.db"
 
 CMD ["sh", "-c", "node node_modules/prisma/build/index.js db push --skip-generate && node server.js"]
